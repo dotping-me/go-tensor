@@ -54,7 +54,10 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 
 	offset := 0
 	for i, idx := range indices {
-		if idx < 0 || idx >= int(t.Shape[i]) {
+
+		// NOTE: Ignore broadcasted axes
+		//       Also changed ">=" to ">", just watch out for that
+		if (idx < 0 || idx >= int(t.Shape[i])) && t.Strides[i] != 0 {
 			return 0, fmt.Errorf(
 				"Index %d exceeds Axis %d of size %d", idx, i, t.Shape[i],
 			)
@@ -87,8 +90,13 @@ func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 		tensorAxis := broadcastedShape[i]
 		targetAxis := targetShape[i]
 
-		if !(tensorAxis == 1 || tensorAxis == targetAxis) {
+		if tensorAxis != 1 && targetAxis != 1 && tensorAxis != targetAxis {
 			return nil, fmt.Errorf("Cannot broadcast dimension %d: %d to %d!", i, tensorAxis, targetAxis)
+		}
+
+		// Axis of original tensor dominates -> Unchanged
+		if tensorAxis > targetAxis {
+			targetShape[i] = tensorAxis
 		}
 
 		// Axes are equal, no stretching here
