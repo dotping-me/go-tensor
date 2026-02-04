@@ -2,10 +2,23 @@ package tensor
 
 import "fmt"
 
+// TODO: Abstract this struct
 type Tensor struct {
 	Shape   []int
 	Data    []float32
 	Strides []int
+}
+
+// Constructor which calculates strides on instantiation
+func NewTensor(shape []int, data []float32) *Tensor {
+
+	// TODO: Shape to Data validation
+
+	return &Tensor{
+		Shape:   shape,
+		Data:    data,
+		Strides: CalculateStrides(shape),
+	}
 }
 
 // Calculates the strides for a tensor
@@ -29,15 +42,6 @@ func CalculateStrides(shape []int) []int {
 	return strides
 }
 
-// Constructor which calculates strides on instantiation
-func New(shape []int, data []float32) *Tensor {
-	return &Tensor{
-		Shape:   shape,
-		Data:    data,
-		Strides: CalculateStrides(shape),
-	}
-}
-
 // Returns the element at the given index
 func (t *Tensor) At(indices ...int) (float32, error) {
 	if len(indices) != len(t.Shape) {
@@ -56,7 +60,6 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 	for i, idx := range indices {
 
 		// NOTE: Ignore broadcasted axes
-		//       Also changed ">=" to ">", just watch out for that
 		if (idx < 0 || idx >= int(t.Shape[i])) && t.Strides[i] != 0 {
 			return 0, fmt.Errorf(
 				"Index %d exceeds Axis %d of size %d", idx, i, t.Shape[i],
@@ -72,16 +75,45 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 // Broadcasting:
 // Axes of a tensor are stretched to adapt it to a given size allowing for
 // element-wise operations
-func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
+func FindBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
+	lengthA := len(shape1)
+	lengthB := len(shape2)
 
+	maxRank := max(lengthA, lengthB)
+	outputShape := predendWith([]int{}, maxRank, 1)
+
+	for i := range maxRank {
+		if i > lengthA-1 && i <= lengthB-1 {
+			outputShape[i] = shape2[i]
+			continue
+
+		} else if i > lengthB-1 && i <= lengthA-1 {
+			outputShape[i] = shape1[i]
+			continue
+
+		} else if shape1[i] != 1 && shape2[i] != 1 && shape1[i] != shape2[i] {
+			return nil, fmt.Errorf(
+				"Cannot broadcast Shapes %v and %v at Axis %v!", shape1, shape2, i,
+			)
+		}
+
+		outputShape[i] = max(shape1[i], shape2[i])
+	}
+
+	return outputShape, nil
+}
+
+func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 	targetRank := len(targetShape)
 	if len(t.Shape) > targetRank {
 		return nil, fmt.Errorf("Cannot broadcast Tensor: Tensor Rank > Target Rank")
 	}
 
-	// Step 1: Prepend to Shape and subsequently strides
-	broadcastedShape := prepend(t.Shape, targetRank, 1)
-	broadcastedStrides := prepend(t.Strides, targetRank, 0)
+	// NOTE: Use FindBroadcastShape() to optimize this here?
+
+	// Step 1: predendWith to Shape and subsequently strides
+	broadcastedShape := predendWith(t.Shape, targetRank, 1)
+	broadcastedStrides := predendWith(t.Strides, targetRank, 0)
 
 	// Step 2: Aligning axes
 	// >>> Rule 1: One of the axes must be 1 OR both must be equal!
@@ -115,11 +147,11 @@ func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 }
 
 // Helper function:
-// Prepends n - len(arr) 0's to arr
-func prepend(arr []int, n int, prependWith int) []int {
+// predendWiths n - len(arr) 0's to arr
+func predendWith(arr []int, n int, v int) []int {
 	newArray := make([]int, n)
 	for i := 0; i < n-len(arr); i++ {
-		newArray[i] = prependWith
+		newArray[i] = v
 	}
 
 	copy(newArray[n-len(arr):], arr)

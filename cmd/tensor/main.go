@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	T := tensor.New([]int{3, 1}, []float32{1, 2, 3})
+	T := tensor.NewTensor([]int{3, 1}, []float32{1, 2, 3})
 
 	// Accessing an element
 	el, err := T.At(1, 0)
@@ -31,4 +31,21 @@ func main() {
 	}
 
 	fmt.Printf("Data at index (2, 3): %v\n", el)
+
+	test, err := tensor.FindBroadcastShape([]int{3, 1}, []int{1, 4, 7})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%v\n", test)
+
+	// Adding 2 tensors
+	A := tensor.NewTensor([]int{3, 1}, []float32{1, 2, 3})
+	B := tensor.NewTensor([]int{1, 4}, []float32{10, 20, 30, 40})
+	C, err := tensor.Add(A, B)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%v\n", C.Data)
 }
