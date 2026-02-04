@@ -1,12 +1,14 @@
 package tensor
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-// TODO: Abstract this struct
 type Tensor struct {
-	Shape   []int
-	Data    []float32
-	Strides []int
+	shape   []int
+	data    []float32
+	strides []int
 }
 
 // Constructor which calculates strides on instantiation
@@ -15,16 +17,65 @@ func NewTensor(shape []int, data []float32) *Tensor {
 	// TODO: Shape to Data validation
 
 	return &Tensor{
-		Shape:   shape,
-		Data:    data,
-		Strides: CalculateStrides(shape),
+		shape:   shape,
+		data:    data,
+		strides: calculateStrides(shape),
 	}
+}
+
+// String representation
+func (t *Tensor) String() string {
+	rank := len(t.shape)
+	if rank == 0 {
+		return fmt.Sprintf("%v", t.data[0])
+	}
+
+	var sb strings.Builder
+	w := newWalker(t)
+	// lastIndex := w.Index()
+
+	// Write opening brackets
+	for range rank {
+		fmt.Fprintf(&sb, "[")
+	}
+
+	for {
+		if w.done {
+			break
+		}
+
+		fmt.Fprintf(&sb, "%f", w.Value())
+
+		// Check if axis was changed
+		currentIndex := w.Index()
+		for i := rank - 1; i >= 0; i-- {
+			if currentIndex[i] == t.shape[i]-1 && i != 0 {
+				fmt.Fprintf(&sb, "] [")
+
+			} else if i != 0 {
+				fmt.Fprintf(&sb, " ")
+			}
+		}
+
+		w.WalkOne()
+	}
+
+	// Truncates extra " ["
+	s := sb.String()
+	s = s[:len(s)-2]
+
+	// Last element reached, close all open brackets
+	for range rank - 1 {
+		s = s + "]"
+	}
+
+	return s
 }
 
 // Calculates the strides for a tensor
 // A stride is basically the # of elements that needs to be moved per axis to
 // access the next batch
-func CalculateStrides(shape []int) []int {
+func calculateStrides(shape []int) []int {
 	strides := make([]int, len(shape))
 
 	// Formula:
@@ -44,11 +95,11 @@ func CalculateStrides(shape []int) []int {
 
 // Returns the element at the given index
 func (t *Tensor) At(indices ...int) (float32, error) {
-	if len(indices) != len(t.Shape) {
+	if len(indices) != len(t.shape) {
 		return 0,
 			fmt.Errorf(
 				"Indices do not match Tensor shape: # of Indices (%d) != Shape (%d)",
-				len(indices), len(t.Shape),
+				len(indices), len(t.shape),
 			)
 	}
 
@@ -60,16 +111,16 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 	for i, idx := range indices {
 
 		// NOTE: Ignore broadcasted axes
-		if (idx < 0 || idx >= int(t.Shape[i])) && t.Strides[i] != 0 {
+		if (idx < 0 || idx >= int(t.shape[i])) && t.strides[i] != 0 {
 			return 0, fmt.Errorf(
-				"Index %d exceeds Axis %d of size %d", idx, i, t.Shape[i],
+				"Index %d exceeds Axis %d of size %d", idx, i, t.shape[i],
 			)
 		}
 
-		offset += (idx * t.Strides[i])
+		offset += (idx * t.strides[i])
 	}
 
-	return t.Data[offset], nil
+	return t.data[offset], nil
 }
 
 // Broadcasting:
@@ -105,15 +156,15 @@ func FindBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
 
 func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 	targetRank := len(targetShape)
-	if len(t.Shape) > targetRank {
+	if len(t.shape) > targetRank {
 		return nil, fmt.Errorf("Cannot broadcast Tensor: Tensor Rank > Target Rank")
 	}
 
 	// NOTE: Use FindBroadcastShape() to optimize this here?
 
 	// Step 1: predendWith to Shape and subsequently strides
-	broadcastedShape := predendWith(t.Shape, targetRank, 1)
-	broadcastedStrides := predendWith(t.Strides, targetRank, 0)
+	broadcastedShape := predendWith(t.shape, targetRank, 1)
+	broadcastedStrides := predendWith(t.strides, targetRank, 0)
 
 	// Step 2: Aligning axes
 	// >>> Rule 1: One of the axes must be 1 OR both must be equal!
@@ -140,9 +191,9 @@ func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 	}
 
 	return &Tensor{
-		Shape:   targetShape,
-		Data:    t.Data,
-		Strides: broadcastedStrides,
+		shape:   targetShape,
+		data:    t.data,
+		strides: broadcastedStrides,
 	}, nil
 }
 

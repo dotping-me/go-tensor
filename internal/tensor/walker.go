@@ -3,34 +3,39 @@ package tensor
 // Just the logic to traverse the tensor because that will be used basically
 // everywhere, by everyone and even their grandma!
 
-type Walker struct {
+type walker struct {
 	tensor *Tensor
 	index  []int // Simulating the data in N-D space
 	offset int
 	done   bool
 }
 
-func NewWalker(t *Tensor) *Walker {
-	return &Walker{
+// Constructor
+func newWalker(t *Tensor) *walker {
+	return &walker{
 		tensor: t,
-		index:  make([]int, len(t.Shape)), // i.e. Rank 3 -> (x, y, z)
+		index:  make([]int, len(t.shape)), // i.e. Rank 3 -> (x, y, z)
 		offset: 0,
 	}
 }
 
+func (w *walker) Index() []int {
+	return w.index // Read-only copy of data
+}
+
 // Gets the current element
-func (w *Walker) Value() float32 {
-	return w.tensor.Data[w.offset] // 1st value will be at (0, 0, 0, ..., 0)
+func (w *walker) Value() float32 {
+	return w.tensor.data[w.offset] // 1st value will be at (0, 0, 0, ..., 0)
 }
 
 // Moves to the next element in tensor
-func (w *Walker) WalkOne() bool {
+func (w *walker) WalkOne() bool {
 	if w.done {
 		return false
 	}
 
-	shape := w.tensor.Shape
-	strides := w.tensor.Strides
+	shape := w.tensor.shape
+	strides := w.tensor.strides
 
 	// Walks to the next element. Must also update offset if need be
 	for axis := len(shape) - 1; axis >= 0; axis-- {

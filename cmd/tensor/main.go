@@ -47,5 +47,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%v\n", C.Data)
+	fmt.Printf("%v\n", C)
 }
