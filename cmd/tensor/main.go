@@ -1,5 +1,3 @@
-// TODO: Write proper tests
-
 package main
 
 import (
@@ -7,8 +5,10 @@ import (
 )
 
 func main() {
-	tests.TestScalarBasics()
-	tests.TestTensorBasics()
-	tests.TestTensorViewOperations()
-	tests.TestMatrixOperations()
+	// tests.TestScalarBasics()
+	// tests.TestTensorBasics()
+	// tests.TestTensorViewOperations()
+	// tests.TestMatrixOperations()
+
+	tests.TestReductionOps()
 }

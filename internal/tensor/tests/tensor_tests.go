@@ -207,3 +207,16 @@ func TestScalarBasics() {
 	Exp, _ := tensor.Exp(S1)
 	fmt.Println(Exp)
 }
+
+func TestReductionOps() {
+	fmt.Println("\n\n----- Test Reduction Ops #1 -----")
+	fmt.Println("Summation along axis, consuming it...")
+
+	T := tensor.NewTensor([]int{3, 3}, []float32{1, 2, 3, 4, 5, 6, 7, 8, 9})
+	rsT, err := T.Sum(1, false)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("[[1 2 3] [4 5 6] [7 8 9]] summed along axis 1:\n%v\n", rsT)
+}
