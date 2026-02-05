@@ -9,9 +9,10 @@ import (
 
 // TODO: Abstract this
 type Tensor struct {
-	shape   []int
-	data    []float32
-	strides []int
+	shape       []int
+	data        []float32
+	strides     []int
+	sliceOffset int
 }
 
 // Constructor which calculates strides on instantiation
@@ -20,15 +21,20 @@ func NewTensor(shape []int, data []float32) *Tensor {
 	// TODO: Shape to Data validation
 
 	return &Tensor{
-		shape:   shape,
-		data:    data,
-		strides: calculateStrides(shape),
+		shape:       shape,
+		data:        data,
+		strides:     calculateStrides(shape),
+		sliceOffset: 0,
 	}
 }
 
 // TODO: Fix this!!!
 // String representation
 func (t *Tensor) String() string {
+	fmt.Println(t.shape)
+	fmt.Println(t.strides)
+	fmt.Println(t.sliceOffset)
+
 	rank := len(t.shape)
 	if rank == 0 {
 		return fmt.Sprintf("%v", t.data[0])
@@ -124,7 +130,7 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 		offset += (idx * t.strides[i])
 	}
 
-	return t.data[offset], nil
+	return t.data[t.sliceOffset+offset], nil
 }
 
 // Broadcasting:
