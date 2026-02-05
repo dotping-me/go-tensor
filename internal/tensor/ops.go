@@ -51,6 +51,23 @@ func elwiseOpsWith2Tensors(
 	callback func(float32, float32) float32,
 ) (*Tensor, error) {
 
+	// Checks if one of the tensors is a scalar
+	if len(a.shape) == 0 {
+		return elwiseOpsWithSingleTensor(
+			b, func(x float32) float32 {
+				return callback(a.data[0], x)
+			},
+		)
+	}
+
+	if len(b.shape) == 0 {
+		return elwiseOpsWithSingleTensor(
+			a, func(x float32) float32 {
+				return callback(b.data[0], x)
+			},
+		)
+	}
+
 	// Finds the output shape first
 	outputShape, err := findBroadcastShape(a.shape, b.shape)
 	if err != nil {
@@ -215,7 +232,6 @@ func BatchedMatrixMul(a, b *Tensor) (*Tensor, error) {
 		// Extract batches
 		// A batch will be basically the size of (Matrix Ax x Matrix By)
 		batchIndex := batchWalker.Index()
-		fmt.Println(batchIndex)
 
 		batchA, err := bA.Get2DSliceAtParentIndex(batchIndex)
 		if err != nil {

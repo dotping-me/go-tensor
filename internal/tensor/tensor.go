@@ -31,10 +31,6 @@ func NewTensor(shape []int, data []float32) *Tensor {
 // TODO: Fix this!!!
 // String representation
 func (t *Tensor) String() string {
-	fmt.Println(t.shape)
-	fmt.Println(t.strides)
-	fmt.Println(t.sliceOffset)
-
 	rank := len(t.shape)
 	if rank == 0 {
 		return fmt.Sprintf("%v", t.data[0])
@@ -42,7 +38,7 @@ func (t *Tensor) String() string {
 
 	var sb strings.Builder
 	w := newWalker(t)
-	// lastIndex := w.Index()
+	fmt.Fprintf(&sb, "%s", fmt.Sprintf("T (Shape: %v): ", t.shape))
 
 	// Write opening brackets
 	for range rank {
@@ -80,6 +76,10 @@ func (t *Tensor) String() string {
 	}
 
 	return s
+}
+
+func (t *Tensor) Data() []float32 {
+	return t.data
 }
 
 // Calculates the strides for a tensor
