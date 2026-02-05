@@ -1,3 +1,5 @@
+// TODO: Modularise everything properly later
+
 package tensor
 
 import (
@@ -5,6 +7,7 @@ import (
 	"strings"
 )
 
+// TODO: Abstract this
 type Tensor struct {
 	shape   []int
 	data    []float32
@@ -23,6 +26,7 @@ func NewTensor(shape []int, data []float32) *Tensor {
 	}
 }
 
+// TODO: Fix this!!!
 // String representation
 func (t *Tensor) String() string {
 	rank := len(t.shape)
@@ -126,7 +130,7 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 // Broadcasting:
 // Axes of a tensor are stretched to adapt it to a given size allowing for
 // element-wise operations
-func FindBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
+func findBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
 	lengthA := len(shape1)
 	lengthB := len(shape2)
 
@@ -197,8 +201,7 @@ func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 	}, nil
 }
 
-// Helper function:
-// predendWiths n - len(arr) 0's to arr
+// Helper function: predendWiths n - len(arr) 0's to arr
 func predendWith(arr []int, n int, v int) []int {
 	newArray := make([]int, n)
 	for i := 0; i < n-len(arr); i++ {
@@ -207,4 +210,55 @@ func predendWith(arr []int, n int, v int) []int {
 
 	copy(newArray[n-len(arr):], arr)
 	return newArray
+}
+
+// Modifies a tensor so that it takes a new shape
+func Reshape(t *Tensor, newShape []int) (*Tensor, error) {
+	newNumberOfData := numberOfDataAsPerShape(newShape)
+	if newNumberOfData != numberOfDataAsPerShape(t.shape) {
+		return nil, fmt.Errorf(
+			"Cannot reshape Tensor of Shape %v to %v: # of elements do not match",
+			t.shape, newShape,
+		)
+	}
+
+	return NewTensor(newShape, t.data), nil
+}
+
+// Destructures axes and data are mapped onto a shape of [1]
+func Flatten(t *Tensor) *Tensor {
+	return &Tensor{
+		shape:   []int{numberOfDataAsPerShape(t.shape)},
+		data:    t.data,
+		strides: []int{1},
+	}
+}
+
+// TODO: Maybe I'll implement something like Pytorch's expandDims later
+
+// Swaps around the tensor's shape and strides to transpose same data over
+// different axes
+func Transpose(t *Tensor, shiftToThisAxisIndex []int) (*Tensor, error) {
+
+	rank := len(t.shape)
+	if rank != len(shiftToThisAxisIndex) {
+		return nil, fmt.Errorf(
+			"Cannot transpose Shape %v onto %v: Unequal length", t.shape, shiftToThisAxisIndex,
+		)
+	}
+
+	// Shift axes
+	newShape := make([]int, len(t.shape))
+	for i, axisIndex := range shiftToThisAxisIndex {
+		if axisIndex < 0 || axisIndex >= rank {
+			return nil, fmt.Errorf(
+				"Transpose error: Axis index (%d) > rank (%d)!",
+				axisIndex+1, rank,
+			)
+		}
+
+		newShape[i] = t.shape[axisIndex]
+	}
+
+	return NewTensor(newShape, t.data), nil
 }
