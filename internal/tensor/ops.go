@@ -19,6 +19,7 @@ func numberOfDataAsPerShape(shape []int) int {
 //   Elementwise operations w/ 1 Tensors!
 // ---------------------------------------
 
+// TODO: Maybe turn this into a Tensor method
 func elwiseOpsWithSingleTensor(
 	t *Tensor,
 	callback func(float32) float32, // TODO: Maybe return an error for sanity?

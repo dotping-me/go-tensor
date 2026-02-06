@@ -213,7 +213,7 @@ func TestReductionOps() {
 	fmt.Println("Summation along axis, consuming it...")
 
 	T := tensor.NewTensor([]int{3, 3}, []float32{1, 2, 3, 4, 5, 6, 7, 8, 9})
-	rsT, err := T.Sum(1, false)
+	rsT, err := T.Sum(1, false) // Column wise
 	if err != nil {
 		panic(err)
 	}
