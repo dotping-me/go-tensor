@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// TODO: Abstract this
 type Tensor struct {
 	shape       []int
 	data        []float32
@@ -24,6 +23,24 @@ func NewTensor(shape []int, data []float32) *Tensor {
 		shape:       shape,
 		data:        data,
 		strides:     calculateStrides(shape),
+		sliceOffset: 0,
+	}
+}
+
+// Helper for autograd engine:
+// Creates a tensor with the same shape as a given tensor but filled with ones
+func New1sTensor(t *Tensor) *Tensor {
+	size := numberOfDataAsPerShape(t.shape)
+	outputData := make([]float32, size)
+
+	for i := range size {
+		outputData[i] = 1
+	}
+
+	return &Tensor{
+		shape:       append([]int{}, t.shape...), // Allocates new memory to avoid pointer issues
+		data:        outputData,
+		strides:     append([]int{}, t.strides...),
 		sliceOffset: 0,
 	}
 }
@@ -78,8 +95,25 @@ func (t *Tensor) String() string {
 	return s
 }
 
+func (t *Tensor) Shape() []int {
+	return t.shape
+}
+
 func (t *Tensor) Data() []float32 {
 	return t.data
+}
+
+// Returns a copy of the tensor with new allocated memory (Deep copy)
+func (t *Tensor) Copy() *Tensor {
+	copyData := make([]float32, len(t.data))
+	copy(copyData, t.data)
+
+	return &Tensor{
+		shape:       append([]int{}, t.shape...),
+		data:        copyData,
+		strides:     append([]int{}, t.strides...),
+		sliceOffset: t.sliceOffset, // This isn't allocated new memory
+	}
 }
 
 // Calculates the strides for a tensor
@@ -165,12 +199,12 @@ func Flatten(t *Tensor) *Tensor {
 	}
 }
 
+// TODO: Switch these view ops to proper files later
 // TODO: Maybe I'll implement something like Pytorch's expandDims later
 
 // Swaps around the tensor's shape and strides to transpose same data over
 // different axes
-func Transpose(t *Tensor, shiftToThisAxisIndex []int) (*Tensor, error) {
-
+func (t *Tensor) Transpose(shiftToThisAxisIndex []int) (*Tensor, error) {
 	rank := len(t.shape)
 	if rank != len(shiftToThisAxisIndex) {
 		return nil, fmt.Errorf(
@@ -180,16 +214,40 @@ func Transpose(t *Tensor, shiftToThisAxisIndex []int) (*Tensor, error) {
 
 	// Shift axes
 	newShape := make([]int, len(t.shape))
+	newStrides := make([]int, rank)
+	seenThisAxis := make([]bool, rank) // TPDO: Do I really need this?
+
 	for i, axisIndex := range shiftToThisAxisIndex {
-		if axisIndex < 0 || axisIndex >= rank {
+		if axisIndex < 0 || axisIndex >= rank || seenThisAxis[i] {
 			return nil, fmt.Errorf(
 				"Transpose error: Axis index (%d) > rank (%d)!",
 				axisIndex+1, rank,
 			)
 		}
 
+		seenThisAxis[i] = true
 		newShape[i] = t.shape[axisIndex]
+		newStrides[i] = t.strides[axisIndex] // TODO: What did I write here? Does it even change?
 	}
 
-	return NewTensor(newShape, t.data), nil
+	return &Tensor{
+		shape:       newShape,
+		data:        t.data,
+		strides:     newStrides,
+		sliceOffset: t.sliceOffset,
+	}, nil
+}
+
+// Yet another helper for 2D matrix multiplication
+func (t *Tensor) Transpose2D() (*Tensor, error) {
+	if len(t.shape) != 2 {
+		return nil, fmt.Errorf("Tensor is not 2D: Rank = %d", len(t.shape))
+	}
+
+	return &Tensor{
+		shape:       []int{t.shape[1], t.shape[0]},
+		data:        t.data,
+		strides:     []int{t.strides[1], t.strides[0]},
+		sliceOffset: t.sliceOffset,
+	}, nil
 }

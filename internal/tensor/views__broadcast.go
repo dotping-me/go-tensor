@@ -2,8 +2,10 @@ package tensor
 
 import "fmt"
 
-// Helper function: predendWiths n - len(arr) 0's to arr
-func predendWith(arr []int, n int, v int) []int {
+// TODO: Make some of these functions into Tensor methods
+
+// Helper function: prependWiths n - len(arr) 0's to arr
+func prependWith(arr []int, n int, v int) []int {
 	newArray := make([]int, n)
 	for i := 0; i < n-len(arr); i++ {
 		newArray[i] = v
@@ -21,7 +23,7 @@ func findBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
 	lengthB := len(shape2)
 
 	maxRank := max(lengthA, lengthB)
-	outputShape := predendWith([]int{}, maxRank, 1)
+	outputShape := prependWith([]int{}, maxRank, 1)
 
 	for i := range maxRank {
 		if i > lengthA-1 && i <= lengthB-1 {
@@ -52,9 +54,9 @@ func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 
 	// NOTE: Use FindBroadcastShape() to optimize this here?
 
-	// Step 1: predendWith to Shape and subsequently strides
-	broadcastedShape := predendWith(t.shape, targetRank, 1)
-	broadcastedStrides := predendWith(t.strides, targetRank, 0)
+	// Step 1: prependWith to Shape and subsequently strides
+	broadcastedShape := prependWith(t.shape, targetRank, 1)
+	broadcastedStrides := prependWith(t.strides, targetRank, 0)
 
 	// Step 2: Aligning axes
 	// >>> Rule 1: One of the axes must be 1 OR both must be equal!
@@ -85,4 +87,33 @@ func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
 		data:    t.data,
 		strides: broadcastedStrides,
 	}, nil
+}
+
+// Helper for autograd
+// Basically undoes the broadcasting and returns the tensor to its original shape
+// before broadcasting, however data is changed
+func BroadcastBackward(t, originalT *Tensor) (*Tensor, error) {
+	outputTensor := t
+	var err error
+
+	// Align the ranks (prepends axes)
+	if len(outputTensor.shape) < len(originalT.shape) {
+		newShape := append([]int{1}, t.shape...)
+		outputTensor, err = Reshape(outputTensor, newShape)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Reduce broadcasted axes
+	for i := range originalT.shape {
+		if originalT.shape[i] == 1 && outputTensor.shape[i] > 1 {
+			outputTensor, err = outputTensor.Sum(i, true)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return outputTensor, nil
 }

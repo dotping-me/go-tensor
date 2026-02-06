@@ -20,7 +20,7 @@ func TestLinearRegression() {
 	W := tensor.NewTensor([]int{2, 1}, []float32{0.5, -1.0})
 	b := tensor.NewTensor([]int{1}, []float32{2.0})
 
-	XW, err := tensor.Matrix2DMul(X, W)
+	XW, err := X.Matrix2DMul(W)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +78,7 @@ func TestBatchInference() {
 		-0.7, 0.8,
 	})
 
-	logits, err := tensor.Matrix2DMul(X, W)
+	logits, err := X.Matrix2DMul(W)
 	if err != nil {
 		panic(err)
 	}

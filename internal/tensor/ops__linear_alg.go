@@ -35,9 +35,45 @@ func (x *Tensor) Softmax(axisIndex int) (*Tensor, error) {
 	return exps.Div(sum)
 }
 
-// Cross-Entropy Loss function
+// ------------------
+//   Loss Functions
+// ------------------
+
 // Basically (I'm using basically a lot because I do not have it in me to explain
 // it properly) calculates how wrong the outputs were
+
+// Mean Squared Error Loss function
+func MeanSquaredError(actualY, expectedY *Tensor, axisIndex int) (*Tensor, error) {
+
+	// Formula:
+	// MSE(y, Y) = (1/N) * ∑ ((y - Y) ** 2)
+
+	// (y - Y)
+	diff, err := actualY.Sub(expectedY)
+	if err != nil {
+		return nil, err
+	}
+
+	// (y - Y) ** 2
+	squared, err := diff.Pow(2)
+	if err != nil {
+		return nil, err
+	}
+
+	// ∑ ((y - Y) ** 2)
+	sum, err := squared.Sum(axisIndex, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// (1/N) * ∑ ((y - Y) ** 2)
+	N := float32(actualY.shape[axisIndex])
+	nT := NewTensor([]int{1}, []float32{N})
+
+	return sum.Div(nT)
+}
+
+// Cross-Entropy Loss function
 func CrossEntropy(x, y *Tensor, axisIndex int) (*Tensor, error) {
 
 	// Formula:

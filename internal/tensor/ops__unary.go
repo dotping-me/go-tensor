@@ -19,6 +19,14 @@ func elwiseOpsWithSingleTensor(
 	return NewTensor(t.shape, newData), nil
 }
 
+func (t *Tensor) Pow(factor float32) (*Tensor, error) {
+	return elwiseOpsWithSingleTensor(
+		t, func(x float32) float32 {
+			return float32(math.Pow(float64(x), float64(factor)))
+		},
+	)
+}
+
 func (t *Tensor) Exp() (*Tensor, error) {
 	return elwiseOpsWithSingleTensor(
 		t, func(x float32) float32 {

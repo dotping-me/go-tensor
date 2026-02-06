@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/dotping-me/go-tensor/internal/tensor/tests"
-)
+import "github.com/dotping-me/go-tensor/internal/autograd/tests"
 
 func main() {
 
@@ -20,8 +18,13 @@ func main() {
 	// --------------------
 
 	// tests.TestReductionOps()
+	// tests.TestSoftmax()
+	// tests.TestCrossEntropy()
+	// tests.TestBatchInference()
 
-	tests.TestSoftmax()
-	tests.TestCrossEntropy()
-	tests.TestBatchInference()
+	// --------------------
+	//    Autograd stuff
+	// --------------------
+
+	tests.TestNumericGrad()
 }

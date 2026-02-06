@@ -103,3 +103,33 @@ func (t *Tensor) Get2DSliceAtParentIndex(parentIndex []int) (*Tensor, error) {
 
 	return batch, nil
 }
+
+// Adds an axis to a tensor of length 1
+func (t *Tensor) ExpandDims(axisIndex int) (*Tensor, error) {
+	rank := len(t.shape)
+
+	if axisIndex < 0 || axisIndex > rank {
+		return nil, fmt.Errorf("Cannot expand axes: Axis %d > Rank %d!", axisIndex, rank)
+	}
+
+	// Inserts an axis in between the shape at index = axisIndex
+	newShape := make([]int, 0, rank+1)
+	newShape = append(newShape, t.shape[:axisIndex]...)
+	newShape = append(newShape, 1)
+	newShape = append(newShape, t.shape[axisIndex:]...)
+
+	// Updates strides
+	// Puts stride at new axis as 0 because well it would be like broadcasting, right?
+
+	newStrides := make([]int, 0, rank+1)
+	newStrides = append(newStrides, t.strides[:axisIndex]...)
+	newStrides = append(newStrides, 0)
+	newStrides = append(newStrides, t.strides[axisIndex:]...)
+
+	return &Tensor{
+		shape:       newShape,
+		data:        t.data,
+		strides:     newStrides,
+		sliceOffset: t.sliceOffset,
+	}, nil
+}

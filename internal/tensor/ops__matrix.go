@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func Matrix2DMul(a, b *Tensor) (*Tensor, error) {
+func (a *Tensor) Matrix2DMul(b *Tensor) (*Tensor, error) {
 	if len(a.shape) != 2 || len(b.shape) != 2 {
 		return nil, fmt.Errorf("Shapes are not 2D: %v and %v", a.shape, b.shape)
 	}
@@ -108,7 +108,7 @@ func BatchedMatrixMul(a, b *Tensor) (*Tensor, error) {
 		}
 
 		// Perform multiplication
-		batchC, err := Matrix2DMul(batchA, batchB)
+		batchC, err := batchA.Matrix2DMul(batchB)
 		if err != nil {
 			return nil, err
 		}

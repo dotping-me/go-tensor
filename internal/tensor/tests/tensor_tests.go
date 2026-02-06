@@ -24,6 +24,14 @@ func TestTensorBasics() {
 	}
 
 	fmt.Println("Element of T at (1, 1):", el) // Should be 5
+
+	fmt.Println("\n\n----- Test Tensor Basic #2 -----")
+	fmt.Println("Deep cloning a tensor...")
+
+	T = tensor.NewTensor([]int{1}, []float32{1})
+	cT := T.Copy()
+
+	fmt.Println(cT.At(0))
 }
 
 func TestTensorViewOperations() {
@@ -70,7 +78,7 @@ func TestTensorViewOperations() {
 	fmt.Println("\n\n----- Test Tensor View #5 -----")
 	fmt.Println("Transposing a tensor...")
 
-	tT, err := tensor.Transpose(T, []int{1, 0})
+	tT, err := T.Transpose([]int{1, 0})
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +120,7 @@ func TestMatrixOperations() {
 
 	A := tensor.NewTensor([]int{2, 2}, []float32{1, 2, 3, 4})
 	B := tensor.NewTensor([]int{2, 3}, []float32{5, 6, 7, 8, 9, 0})
-	C, err := tensor.Matrix2DMul(A, B)
+	C, err := A.Matrix2DMul(B)
 	if err != nil {
 		panic(err)
 	}

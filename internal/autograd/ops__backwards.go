@@ -1,0 +1,237 @@
+// Operations for well tensor operations but they're meant to be the inverse of
+// those and undo them
+
+package autograd
+
+import (
+	"log"
+
+	"github.com/dotping-me/go-tensor/internal/tensor"
+)
+
+// TODO: Maybe these can be made into a modular fashion like Tensor elementwise ops
+// TODO: Cleanup this file
+
+// -----------------------------------
+//   Backwards Func() for Binary ops
+// -----------------------------------
+
+func Add(a, b *Variable) *Variable {
+	outputTensor, err := a.Tensor.Add(b.Tensor)
+	if err != nil {
+		log.Fatal(err) // returning errors would just be a mess
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a, b},
+		RequiresGrad: a.RequiresGrad || b.RequiresGrad,
+	}
+
+	// Initialises that variable's backwards function here
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			// Computes gradients
+			if a.RequiresGrad {
+				SumGrad(&a.Grad, outputVariable.Grad)
+			}
+
+			if b.RequiresGrad {
+				SumGrad(&b.Grad, outputVariable.Grad)
+			}
+
+		}
+	}
+
+	return outputVariable
+}
+
+func Mul(a, b *Variable) *Variable {
+	outputTensor, err := a.Tensor.Mul(b.Tensor)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a, b},
+		RequiresGrad: a.RequiresGrad || b.RequiresGrad,
+	}
+
+	// Initialises that variable's backwards function here
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			// Computes gradients
+			if a.RequiresGrad {
+				gradA, err := outputVariable.Grad.Mul(b.Tensor)
+				if err != nil {
+					log.Fatal(err) // TODO: Maybe these checks can be removed for optimisation
+				}
+
+				SumGrad(&a.Grad, gradA)
+			}
+
+			if b.RequiresGrad {
+				gradB, err := outputVariable.Grad.Mul(a.Tensor)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				SumGrad(&b.Grad, gradB)
+			}
+
+		}
+	}
+
+	return outputVariable
+}
+
+// -----------------------------------
+//   Backwards Func() for Matrix ops
+// -----------------------------------
+
+func Matrix2dMul(a, b *Variable) *Variable {
+	outputTensor, err := a.Tensor.Matrix2DMul(b.Tensor)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a, b},
+		RequiresGrad: a.RequiresGrad || b.RequiresGrad,
+	}
+
+	// Initialises that variable's backwards function here
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			// Computes gradients
+			if a.RequiresGrad {
+				tB, err := b.Tensor.Transpose2D()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				gradA, err := outputVariable.Grad.Matrix2DMul(tB)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				SumGrad(&a.Grad, gradA)
+			}
+
+			if b.RequiresGrad {
+				tA, err := a.Tensor.Transpose2D()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				gradB, err := tA.Matrix2DMul(outputVariable.Grad)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				SumGrad(&b.Grad, gradB)
+			}
+
+		}
+	}
+
+	return outputVariable
+}
+
+// --------------------------------------
+//   Backwards Func() for Reduction ops
+// --------------------------------------
+
+func Sum(a *Variable, axisIndex int, keepAxis bool) *Variable {
+	outputTensor, err := a.Tensor.Sum(axisIndex, keepAxis)
+	if err != nil {
+		panic(err)
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a},
+		RequiresGrad: a.RequiresGrad,
+	}
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			grad := outputVariable.Grad
+			if !keepAxis {
+				grad, _ = grad.ExpandDims(axisIndex)
+			}
+
+			grad, err := tensor.Broadcast(grad, a.Tensor.Shape())
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			SumGrad(&a.Grad, grad)
+		}
+	}
+
+	return outputVariable
+}
+
+// -------------------------------------------
+//   Backwards Func() for Linear Algebra ops
+// -------------------------------------------
+
+func Softmax(a *Variable, axisIndex int) *Variable {
+	outputTensor, err := a.Tensor.Softmax(axisIndex)
+	if err != nil {
+		panic(err)
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a},
+		RequiresGrad: a.RequiresGrad,
+	}
+
+	// Jacobian-vector product
+	// A bunch of magic and fairy dust to undo softmax
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			tmp, _ := outputVariable.Grad.Mul(outputVariable.Tensor)
+			sum, _ := tmp.Sum(axisIndex, true)
+			diff, _ := outputVariable.Grad.Sub(sum)
+			grad, _ := diff.Mul(outputVariable.Tensor)
+			SumGrad(&a.Grad, grad)
+		}
+	}
+
+	return outputVariable
+}
+
+// If softmax was hard, then you do not want to know what this is
+func CrossEntropy(x, y *Variable) *Variable {
+
+	// Let's worry about the errors another time
+	probs := Softmax(x, 1)
+	logp, _ := probs.Tensor.Log()
+	masked, _ := logp.Mul(y.Tensor)
+	sum, _ := masked.Sum(1, false)
+	lossTensor, _ := sum.Neg()
+
+	outputVariable := &Variable{
+		Tensor:       lossTensor,
+		Parents:      []*Variable{x},
+		RequiresGrad: x.RequiresGrad,
+	}
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			diff, _ := probs.Tensor.Sub(y.Tensor)
+			SumGrad(&x.Grad, diff)
+		}
+	}
+
+	return outputVariable
+}
