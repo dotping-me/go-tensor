@@ -69,27 +69,7 @@ func (t *Tensor) SlicePerAxis(slices ...Slice) (*Tensor, error) {
 	}, nil
 }
 
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!                       !!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!         NOTE          !!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!                       !!!!!!!!!!!!!!!!
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-// Helper function for batched matrix multiplication!
-
-/*
-// Original implementation in case I mess something up in the process:
-batchIndex := batchWalker.Index()
-
-	sliceArgs := []Slice{
-		{Start: batchIndex[0], End: batchIndex[0] + 1, Step: 1}, // Only 1 axis
-		{Start: batchIndex[1], End: batchIndex[1] + 1, Step: 1}, // Only 1 axis
-		All(), // X of 2D Matrix
-		All(), // Y of 2D Matrix
-	}
-
-sliceA, err := bA.SlicePerAxis(sliceArgs...)
-*/
+// NOTE: Helper function for batched matrix multiplication!
 func (t *Tensor) Get2DSliceAtParentIndex(parentIndex []int) (*Tensor, error) {
 	slices := make([]Slice, len(t.shape))
 

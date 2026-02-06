@@ -103,6 +103,16 @@ func calculateStrides(shape []int) []int {
 	return strides
 }
 
+// Finds the number of data elements according to shape
+func numberOfDataAsPerShape(shape []int) int {
+	total := 1
+	for _, axis := range shape {
+		total *= axis
+	}
+
+	return total
+}
+
 // Returns the element at the given index
 func (t *Tensor) At(indices ...int) (float32, error) {
 	if len(indices) != len(t.shape) {
@@ -131,91 +141,6 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 	}
 
 	return t.data[t.sliceOffset+offset], nil
-}
-
-// Broadcasting:
-// Axes of a tensor are stretched to adapt it to a given size allowing for
-// element-wise operations
-func findBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
-	lengthA := len(shape1)
-	lengthB := len(shape2)
-
-	maxRank := max(lengthA, lengthB)
-	outputShape := predendWith([]int{}, maxRank, 1)
-
-	for i := range maxRank {
-		if i > lengthA-1 && i <= lengthB-1 {
-			outputShape[i] = shape2[i]
-			continue
-
-		} else if i > lengthB-1 && i <= lengthA-1 {
-			outputShape[i] = shape1[i]
-			continue
-
-		} else if shape1[i] != 1 && shape2[i] != 1 && shape1[i] != shape2[i] {
-			return nil, fmt.Errorf(
-				"Cannot broadcast Shapes %v and %v at Axis %v!", shape1, shape2, i,
-			)
-		}
-
-		outputShape[i] = max(shape1[i], shape2[i])
-	}
-
-	return outputShape, nil
-}
-
-func Broadcast(t *Tensor, targetShape []int) (*Tensor, error) {
-	targetRank := len(targetShape)
-	if len(t.shape) > targetRank {
-		return nil, fmt.Errorf("Cannot broadcast Tensor: Tensor Rank > Target Rank")
-	}
-
-	// NOTE: Use FindBroadcastShape() to optimize this here?
-
-	// Step 1: predendWith to Shape and subsequently strides
-	broadcastedShape := predendWith(t.shape, targetRank, 1)
-	broadcastedStrides := predendWith(t.strides, targetRank, 0)
-
-	// Step 2: Aligning axes
-	// >>> Rule 1: One of the axes must be 1 OR both must be equal!
-	// >>> Rule 2: Tensors will be broadcasted to the greatest rank
-	for i := targetRank - 1; i >= 0; i-- {
-		tensorAxis := broadcastedShape[i]
-		targetAxis := targetShape[i]
-
-		if tensorAxis != 1 && targetAxis != 1 && tensorAxis != targetAxis {
-			return nil, fmt.Errorf("Cannot broadcast dimension %d: %d to %d!", i, tensorAxis, targetAxis)
-		}
-
-		// Axis of original tensor dominates -> Unchanged
-		if tensorAxis > targetAxis {
-			targetShape[i] = tensorAxis
-		}
-
-		// Axes are equal, no stretching here
-		if tensorAxis != 1 {
-			continue
-		}
-
-		broadcastedStrides[i] = 0
-	}
-
-	return &Tensor{
-		shape:   targetShape,
-		data:    t.data,
-		strides: broadcastedStrides,
-	}, nil
-}
-
-// Helper function: predendWiths n - len(arr) 0's to arr
-func predendWith(arr []int, n int, v int) []int {
-	newArray := make([]int, n)
-	for i := 0; i < n-len(arr); i++ {
-		newArray[i] = v
-	}
-
-	copy(newArray[n-len(arr):], arr)
-	return newArray
 }
 
 // Modifies a tensor so that it takes a new shape

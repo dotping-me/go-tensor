@@ -25,7 +25,7 @@ func TestLinearRegression() {
 		panic(err)
 	}
 
-	Y, err := tensor.Add(XW, b)
+	Y, err := XW.Add(b)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func TestSoftmax() {
 	fmt.Println("softmax(x_i) = e**x_i / (∑_j (e**x_i))")
 
 	X := tensor.NewTensor([]int{1, 3}, []float32{1, 2, 3})
-	S, err := tensor.Softmax(X, 1)
+	S, err := X.Softmax(1)
 	if err != nil {
 		panic(err)
 	}
@@ -53,28 +53,7 @@ func TestCrossEntropy() {
 	logits := tensor.NewTensor([]int{1, 3}, []float32{1, 2, 3})
 	labels := tensor.NewTensor([]int{1, 3}, []float32{0, 0, 1})
 
-	probs, err := tensor.Softmax(logits, 1)
-	if err != nil {
-		panic(err)
-	}
-
-	logProbs, err := tensor.Log(probs)
-	if err != nil {
-		panic(err)
-	}
-
-	masked, err := tensor.Mul(labels, logProbs)
-	if err != nil {
-		panic(err)
-	}
-
-	// Sumation part
-	loss, err := masked.Sum(1, false)
-	if err != nil {
-		panic(err)
-	}
-
-	loss, err = tensor.Neg(loss)
+	loss, err := tensor.CrossEntropy(logits, labels, 1)
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +83,7 @@ func TestBatchInference() {
 		panic(err)
 	}
 
-	probs, err := tensor.Softmax(logits, 1)
+	probs, err := logits.Softmax(1)
 	if err != nil {
 		panic(err)
 	}

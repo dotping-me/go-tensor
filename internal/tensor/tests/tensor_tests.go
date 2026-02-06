@@ -83,7 +83,7 @@ func TestTensorUnaryOperations() {
 	fmt.Println("Doing exponential of a tensor...")
 
 	T := tensor.NewTensor([]int{2, 2}, []float32{1, 2, 3, 4})
-	eT, err := tensor.Exp(T)
+	eT, err := T.Exp()
 	if err != nil {
 		panic(err)
 	}
@@ -98,7 +98,7 @@ func TestTensorBinaryOperations() {
 	// Adding 2 tensors
 	A := tensor.NewTensor([]int{3, 1}, []float32{1, 2, 3})
 	B := tensor.NewTensor([]int{1, 4}, []float32{10, 20, 30, 40})
-	C, err := tensor.Add(A, B)
+	C, err := A.Add(B)
 	if err != nil {
 		panic(err)
 	}
@@ -193,7 +193,7 @@ func TestScalarBasics() {
 	// Adding 2 scalars
 	S1 := tensor.NewTensor([]int{}, []float32{5})
 	S2 := tensor.NewTensor([]int{}, []float32{1})
-	Sum, _ := tensor.Add(S1, S2)
+	Sum, _ := S1.Add(S2)
 	fmt.Println("\nAdding scalar 5 with scalar 1:", Sum)
 
 	fmt.Println("\n\n----- Test Scalar #2 -----")
@@ -201,10 +201,10 @@ func TestScalarBasics() {
 
 	// Multiplying a scalar with a tensor
 	T1 := tensor.NewTensor([]int{2, 3}, []float32{1, 2, 3, 4, 5, 6})
-	Mul, _ := tensor.Mul(T1, S1)
+	Mul, _ := T1.Mul(S1)
 	fmt.Println("\nMultiplying scalar 5 with tensor [ [1 2 3] [4 5 6] ]:\n", Mul)
 
-	Exp, _ := tensor.Exp(S1)
+	Exp, _ := S1.Exp()
 	fmt.Println(Exp)
 }
 

@@ -400,29 +400,3 @@ func (t *Tensor) StandardDeviation(axisIndex int, keepAxis bool) (*Tensor, error
 
 	return variance, nil
 }
-
-// It looks like a fever dream
-// Basically: softmax(x_i) = e**x_i / (∑_j (e**x_i))
-func Softmax(x *Tensor, axisIndex int) (*Tensor, error) {
-	lse, err := x.LogSumExp(axisIndex, true)
-	if err != nil {
-		return nil, err
-	}
-
-	diff, err := Sub(x, lse)
-	if err != nil {
-		return nil, err
-	}
-
-	exps, err := Exp(diff)
-	if err != nil {
-		return nil, err
-	}
-
-	sum, err := exps.Sum(axisIndex, true)
-	if err != nil {
-		return nil, err
-	}
-
-	return Div(exps, sum)
-}
