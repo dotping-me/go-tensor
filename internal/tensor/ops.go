@@ -19,7 +19,6 @@ func numberOfDataAsPerShape(shape []int) int {
 //   Elementwise operations w/ 1 Tensors!
 // ---------------------------------------
 
-// TODO: Maybe turn this into a Tensor method
 func elwiseOpsWithSingleTensor(
 	t *Tensor,
 	callback func(float32) float32, // TODO: Maybe return an error for sanity?
@@ -35,10 +34,27 @@ func elwiseOpsWithSingleTensor(
 	return NewTensor(t.shape, newData), nil
 }
 
+// TODO: Maybe turn it into a Tensor method
 func Exp(t *Tensor) (*Tensor, error) {
 	return elwiseOpsWithSingleTensor(
 		t, func(x float32) float32 {
 			return float32(math.Exp(float64(x)))
+		},
+	)
+}
+
+func Log(t *Tensor) (*Tensor, error) {
+	return elwiseOpsWithSingleTensor(
+		t, func(x float32) float32 {
+			return float32(math.Log(float64(x)))
+		},
+	)
+}
+
+func Neg(t *Tensor) (*Tensor, error) {
+	return elwiseOpsWithSingleTensor(
+		t, func(x float32) float32 {
+			return -x
 		},
 	)
 }

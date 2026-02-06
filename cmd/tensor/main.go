@@ -5,10 +5,23 @@ import (
 )
 
 func main() {
+
+	// ---------------------
+	//   Just Tensor stuff
+	// ---------------------
+
 	// tests.TestScalarBasics()
 	// tests.TestTensorBasics()
 	// tests.TestTensorViewOperations()
 	// tests.TestMatrixOperations()
 
-	tests.TestReductionOps()
+	// --------------------
+	//    Basic ML stuff
+	// --------------------
+
+	// tests.TestReductionOps()
+
+	tests.TestSoftmax()
+	tests.TestCrossEntropy()
+	tests.TestBatchInference()
 }

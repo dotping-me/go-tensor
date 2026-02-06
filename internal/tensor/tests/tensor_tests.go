@@ -219,4 +219,6 @@ func TestReductionOps() {
 	}
 
 	fmt.Printf("[[1 2 3] [4 5 6] [7 8 9]] summed along axis 1:\n%v\n", rsT)
+
+	// TODO: Write test cases for other reduction ops
 }
