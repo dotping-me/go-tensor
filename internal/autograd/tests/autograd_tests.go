@@ -78,3 +78,54 @@ func TestNumericGrad() {
 	fmt.Println("Analytic:", analytic)
 	fmt.Println("Numeric:", numeric)
 }
+
+func TestTrainingLoop() {
+	X := tensor.NewTensor([]int{4, 1}, []float32{1, 2, 3, 4})
+	Y := tensor.NewTensor([]int{4, 1}, []float32{2, 4, 6, 8})
+
+	w := autograd.NewVariable(
+		tensor.NewTensor([]int{1, 1}, []float32{0.1}),
+		true,
+	)
+
+	b := autograd.NewVariable(tensor.NewScalar(1), true)
+
+	// TODO: Maybe just add scalar support so that I don't need to go through
+	//		 a tensor constructor everytime
+
+	learningRate := tensor.NewScalar(0.01)
+
+	// 100 iterations
+	for epoch := range 100 {
+
+		// Reset gradients
+		w.SetGradToNil()
+		b.SetGradToNil()
+
+		// y = weight(x) + bias
+		pred := autograd.Add(autograd.Matrix2dMul(
+			autograd.NewVariable(X, false),
+			w,
+		), b)
+
+		// Finds how much prediction differs from true value
+		diff := autograd.Sub(pred, autograd.NewVariable(Y, false))
+
+		// MSE (Mean Squared Error)
+		loss := autograd.Sum(autograd.Mul(diff, diff), 0, false)
+		autograd.Backward(loss)
+
+		// SGD (Stochastic Gradient Descent)
+		wUpdate, _ := w.Grad.Mul(learningRate)
+		w.Tensor, _ = w.Tensor.Sub(wUpdate)
+
+		bUpdate, _ := b.Grad.Mul(learningRate)
+		b.Tensor, _ = b.Tensor.Sub(bUpdate)
+
+		if epoch%10 == 0 {
+			/* fmt.Println("\nEpoch", epoch+10)
+			fmt.Println("w:", w.Tensor.Data()[0]) */
+			fmt.Println("Loss:", loss.Tensor.Data()[0])
+		}
+	}
+}

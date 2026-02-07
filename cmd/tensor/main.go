@@ -26,5 +26,6 @@ func main() {
 	//    Autograd stuff
 	// --------------------
 
-	tests.TestNumericGrad()
+	// tests.TestNumericGrad()
+	tests.TestTrainingLoop()
 }

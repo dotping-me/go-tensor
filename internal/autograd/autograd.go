@@ -22,6 +22,12 @@ func (v *Variable) SetGradToNil() {
 	v.Grad = nil
 }
 
+func (v *Variable) setGradToZeros() {
+	if v != nil {
+		v.Grad = tensor.NewConstantValTensor(v.Grad, 0)
+	}
+}
+
 // Iterates through a variable, finding all its parents and those parents' parents
 // and so on...
 func FindParentTensorsRecursively(v *Variable) []*Variable {
@@ -64,7 +70,7 @@ func SumGrad(dst **tensor.Tensor, src *tensor.Tensor) {
 // This is what it's all about!!
 func Backward(v *Variable) {
 	traversalTree := FindParentTensorsRecursively(v)
-	v.Grad = tensor.New1sTensor(v.Tensor)
+	v.Grad = tensor.NewConstantValTensor(v.Tensor, 1)
 
 	// Traverses tree backwards (starting with this v variable, then its parents)
 	for i := len(traversalTree) - 1; i >= 0; i-- {

@@ -73,7 +73,7 @@ func (t *Tensor) reduce(axisIndex int, keepAxis bool, op onePassReductionOp) (*T
 	// Allocates memory
 	outputShape := determineOutputShape(t.shape, axisIndex, keepAxis)
 	outputTensor := NewTensor(
-		outputShape, make([]float32, numberOfDataAsPerShape(outputShape)),
+		outputShape, make([]float32, NumberOfDataAsPerShape(outputShape)),
 	)
 
 	// Starts iterating over tensor data
@@ -173,7 +173,7 @@ func (t *Tensor) ArgMax(axisIndex int, keepAxis bool) (*Tensor, error) {
 	// Allocates memory
 	outputShape := determineOutputShape(t.shape, axisIndex, keepAxis)
 	outputTensor := NewTensor(
-		outputShape, make([]float32, numberOfDataAsPerShape(outputShape)),
+		outputShape, make([]float32, NumberOfDataAsPerShape(outputShape)),
 	)
 
 	// Starts iterating over tensor data
@@ -226,7 +226,7 @@ func (t *Tensor) ArgMin(axisIndex int, keepAxis bool) (*Tensor, error) {
 	// Allocates memory
 	outputShape := determineOutputShape(t.shape, axisIndex, keepAxis)
 	outputTensor := NewTensor(
-		outputShape, make([]float32, numberOfDataAsPerShape(outputShape)),
+		outputShape, make([]float32, NumberOfDataAsPerShape(outputShape)),
 	)
 
 	// Starts iterating over tensor data
@@ -280,7 +280,7 @@ func (t *Tensor) LogSumExp(axisIndex int, keepAxis bool) (*Tensor, error) {
 	// Allocates memory
 	outputShape := determineOutputShape(t.shape, axisIndex, keepAxis)
 	outputTensor := NewTensor(
-		outputShape, make([]float32, numberOfDataAsPerShape(outputShape)),
+		outputShape, make([]float32, NumberOfDataAsPerShape(outputShape)),
 	)
 
 	// Starts iterating over tensor data
@@ -352,7 +352,7 @@ func (t *Tensor) Variance(axisIndex int, keepAxis bool) (*Tensor, error) {
 	// Allocates memory
 	outputShape := determineOutputShape(t.shape, axisIndex, keepAxis)
 	outputTensor := NewTensor(
-		outputShape, make([]float32, numberOfDataAsPerShape(outputShape)),
+		outputShape, make([]float32, NumberOfDataAsPerShape(outputShape)),
 	)
 
 	// Starts iterating over tensor data

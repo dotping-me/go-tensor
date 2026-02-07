@@ -43,7 +43,7 @@ func elwiseOpsWith2Tensors(
 
 	// Creates output tensor
 	outputTensor := NewTensor(
-		outputShape, make([]float32, numberOfDataAsPerShape(outputShape)),
+		outputShape, make([]float32, NumberOfDataAsPerShape(outputShape)),
 	)
 
 	// Performs operation iteratively

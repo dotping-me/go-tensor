@@ -1,5 +1,5 @@
-// Operations for well tensor operations but they're meant to be the inverse of
-// those and undo them
+// Extending tensor operations, adding a callback function to undo their effects
+// during backwards pass
 
 package autograd
 
@@ -37,8 +37,49 @@ func Add(a, b *Variable) *Variable {
 				SumGrad(&a.Grad, outputVariable.Grad)
 			}
 
+			// NOTE: Biases will ALSO have to be summed back here
+			//       Usually this is where all that will happen I thinnk
+			//       because Y = wX + B -> + B is always the second parent
 			if b.RequiresGrad {
-				SumGrad(&b.Grad, outputVariable.Grad)
+				grad := outputVariable.Grad
+
+				if !grad.IsShapeEqualTo(b.Tensor.Shape()) {
+					grad, _ = tensor.BroadcastBackward(grad, b.Tensor)
+				}
+
+				SumGrad(&b.Grad, grad)
+			}
+
+		}
+	}
+
+	return outputVariable
+}
+
+func Sub(a, b *Variable) *Variable {
+	outputTensor, err := a.Tensor.Sub(b.Tensor)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a, b},
+		RequiresGrad: a.RequiresGrad || b.RequiresGrad,
+	}
+
+	// Initialises that variable's backwards function here
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			// Computes gradients
+			if a.RequiresGrad {
+				SumGrad(&a.Grad, outputVariable.Grad)
+			}
+
+			if b.RequiresGrad {
+				negGrad, _ := outputVariable.Grad.Neg()
+				SumGrad(&b.Grad, negGrad)
 			}
 
 		}

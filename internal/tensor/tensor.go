@@ -27,14 +27,18 @@ func NewTensor(shape []int, data []float32) *Tensor {
 	}
 }
 
+func NewScalar(x float32) *Tensor {
+	return NewTensor([]int{}, []float32{x})
+}
+
 // Helper for autograd engine:
 // Creates a tensor with the same shape as a given tensor but filled with ones
-func New1sTensor(t *Tensor) *Tensor {
-	size := numberOfDataAsPerShape(t.shape)
+func NewConstantValTensor(t *Tensor, v float32) *Tensor {
+	size := NumberOfDataAsPerShape(t.shape)
 	outputData := make([]float32, size)
 
 	for i := range size {
-		outputData[i] = 1
+		outputData[i] = v
 	}
 
 	return &Tensor{
@@ -103,6 +107,10 @@ func (t *Tensor) Data() []float32 {
 	return t.data
 }
 
+func (t *Tensor) Strides() []int {
+	return t.strides
+}
+
 // Returns a copy of the tensor with new allocated memory (Deep copy)
 func (t *Tensor) Copy() *Tensor {
 	copyData := make([]float32, len(t.data))
@@ -138,7 +146,7 @@ func calculateStrides(shape []int) []int {
 }
 
 // Finds the number of data elements according to shape
-func numberOfDataAsPerShape(shape []int) int {
+func NumberOfDataAsPerShape(shape []int) int {
 	total := 1
 	for _, axis := range shape {
 		total *= axis
@@ -177,10 +185,25 @@ func (t *Tensor) At(indices ...int) (float32, error) {
 	return t.data[t.sliceOffset+offset], nil
 }
 
+// Compares if shapes are equal
+func (t *Tensor) IsShapeEqualTo(shape []int) bool {
+	if len(t.shape) != len(shape) {
+		return false
+	}
+
+	for i := range len(shape) {
+		if t.shape[i] != shape[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Modifies a tensor so that it takes a new shape
 func Reshape(t *Tensor, newShape []int) (*Tensor, error) {
-	newNumberOfData := numberOfDataAsPerShape(newShape)
-	if newNumberOfData != numberOfDataAsPerShape(t.shape) {
+	newNumberOfData := NumberOfDataAsPerShape(newShape)
+	if newNumberOfData != NumberOfDataAsPerShape(t.shape) {
 		return nil, fmt.Errorf(
 			"Cannot reshape Tensor of Shape %v to %v: # of elements do not match",
 			t.shape, newShape,
@@ -193,7 +216,7 @@ func Reshape(t *Tensor, newShape []int) (*Tensor, error) {
 // Destructures axes and data are mapped onto a shape of [1]
 func Flatten(t *Tensor) *Tensor {
 	return &Tensor{
-		shape:   []int{numberOfDataAsPerShape(t.shape)},
+		shape:   []int{NumberOfDataAsPerShape(t.shape)},
 		data:    t.data,
 		strides: []int{1},
 	}
