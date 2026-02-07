@@ -1,6 +1,6 @@
 package autograd
 
-import "github.com/dotping-me/go-tensor/internal/tensor"
+import "github.com/dotping-me/go-tensor/tensor"
 
 type Variable struct {
 	Tensor       *tensor.Tensor

@@ -3,7 +3,7 @@ package tests
 import (
 	"fmt"
 
-	"github.com/dotping-me/go-tensor/internal/tensor"
+	"github.com/dotping-me/go-tensor/tensor"
 )
 
 func TestLinearRegression() {

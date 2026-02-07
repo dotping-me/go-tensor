@@ -1,6 +1,6 @@
 package main
 
-import "github.com/dotping-me/go-tensor/internal/autograd/tests"
+import "github.com/dotping-me/go-tensor/autograd/tests"
 
 func main() {
 

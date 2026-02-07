@@ -6,7 +6,7 @@ package autograd
 import (
 	"log"
 
-	"github.com/dotping-me/go-tensor/internal/tensor"
+	"github.com/dotping-me/go-tensor/tensor"
 )
 
 // TODO: Maybe these can be made into a modular fashion like Tensor elementwise ops

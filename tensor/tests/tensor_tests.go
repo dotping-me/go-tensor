@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/dotping-me/go-tensor/internal/tensor"
+	"github.com/dotping-me/go-tensor/tensor"
 )
 
 func TestTensorBasics() {
