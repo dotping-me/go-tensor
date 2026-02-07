@@ -4,6 +4,8 @@ package tensor
 
 import (
 	"fmt"
+	"log"
+	"math/rand"
 	"strings"
 )
 
@@ -16,8 +18,12 @@ type Tensor struct {
 
 // Constructor which calculates strides on instantiation
 func NewTensor(shape []int, data []float32) *Tensor {
-
-	// TODO: Shape to Data validation
+	if len(data) != NumberOfDataAsPerShape(shape) {
+		log.Fatalf(
+			"# of Tensor data does not match Tensor dimensions: %d != %d",
+			len(data), NumberOfDataAsPerShape(shape),
+		)
+	}
 
 	return &Tensor{
 		shape:       shape,
@@ -33,7 +39,7 @@ func NewScalar(x float32) *Tensor {
 
 // Helper for autograd engine:
 // Creates a tensor with the same shape as a given tensor but filled with ones
-func NewConstantValTensor(t *Tensor, v float32) *Tensor {
+func ConstantTensorLike(t *Tensor, v float32) *Tensor {
 	size := NumberOfDataAsPerShape(t.shape)
 	outputData := make([]float32, size)
 
@@ -47,6 +53,17 @@ func NewConstantValTensor(t *Tensor, v float32) *Tensor {
 		strides:     append([]int{}, t.strides...),
 		sliceOffset: 0,
 	}
+}
+
+func NewRandomTensor(shape []int) *Tensor {
+	numOfData := NumberOfDataAsPerShape(shape)
+	outputData := make([]float32, numOfData)
+
+	for i := range numOfData {
+		outputData[i] = rand.Float32()
+	}
+
+	return NewTensor(shape, outputData)
 }
 
 // TODO: Fix this!!!

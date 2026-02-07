@@ -276,3 +276,48 @@ func CrossEntropy(x, y *Variable) *Variable {
 
 	return outputVariable
 }
+
+// -----------------------------------------
+//   Backwards Func() for Activation funcs
+// -----------------------------------------
+
+func ReLU(x *Variable) *Variable {
+	outputTensor := x.Tensor.Copy()
+	outputData := outputTensor.Data()
+
+	for i := range outputData {
+		if outputData[i] < 0 {
+			outputData[i] = 0
+		}
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{x},
+		RequiresGrad: x.RequiresGrad,
+	}
+
+	if x.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			// Does the same to gradient (0 if < 1, else 1)
+			grad := outputVariable.Grad.Copy()
+			gradData := grad.Data()
+
+			for i := range outputData {
+				if outputData[i] < 0 {
+					gradData[i] = 0
+				}
+			}
+
+			if x.Grad == nil {
+				x.Grad = grad
+
+			} else {
+				x.Grad, _ = x.Grad.Add(grad)
+			}
+		}
+	}
+
+	return outputVariable
+}
