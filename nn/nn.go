@@ -1,12 +1,15 @@
 package nn
 
-import "github.com/dotping-me/go-tensor/autograd"
+import (
+	"fmt"
 
-// This is just basically a Layer but it's here so users can just call Model instead
-// of Layer which makes way more sense
-type Model interface {
-	Forward(v *autograd.Variable) *autograd.Variable
-	Parameters() []*autograd.Variable
+	"github.com/dotping-me/go-tensor/autograd"
+)
+
+// Previous comment here made no sense
+// Mais bon, now this is here so I can attach convenient methods to it
+type Model struct {
+	Root Layer
 }
 
 type Layer interface {
@@ -14,37 +17,35 @@ type Layer interface {
 	Parameters() []*autograd.Variable
 }
 
-type Sequential struct { // Sequention model which plugs into Model interface
-	layers []Layer
+func NewModel(root Layer) *Model {
+	return &Model{Root: root}
 }
 
-func NewSequential() *Sequential {
-	return &Sequential{}
+func (m *Model) Forward(v *autograd.Variable) *autograd.Variable {
+	return m.Root.Forward(v)
 }
 
-func (s *Sequential) Add(l Layer) {
-	s.layers = append(s.layers, l)
+// Collect all parameters recursively -> Each layer calls their Parameters()
+func (m *Model) Parameters() []*autograd.Variable {
+	return m.Root.Parameters()
 }
 
-// Calls Forward on every Layer of the sequential model
-func (s *Sequential) Forward(v *autograd.Variable) *autograd.Variable {
-
-	// Accumulates outputs
-	allOutputs := v
-	for _, l := range s.layers {
-		allOutputs = l.Forward(allOutputs)
+// Loading a set amount of parameters
+func (m *Model) LoadParameters(params []*autograd.Variable) error {
+	existingParams := m.Parameters()
+	if len(params) != len(existingParams) {
+		return fmt.Errorf("Failed to load new %d parameters: Model uses %d parameters", len(params), len(existingParams))
 	}
 
-	return allOutputs
-}
-
-// Collects all the variables from all layers iteratively
-func (s *Sequential) Parameters() []*autograd.Variable {
-	allParams := []*autograd.Variable{}
-
-	for _, l := range s.layers {
-		allParams = append(allParams, l.Parameters()...)
+	// Copies parameters over
+	for i := range existingParams {
+		existingParams[i].Tensor = params[i].Tensor.Copy()
 	}
 
-	return allParams
+	return nil
+}
+
+// Inference
+func (m *Model) Predict(v *autograd.Variable) *autograd.Variable {
+	return m.Forward(v)
 }

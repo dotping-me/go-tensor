@@ -25,7 +25,7 @@ func NewDenseLayer(numberOfInputs, numberOfOutputs int) *DenseLayer {
 	return &DenseLayer{W: W, b: b}
 }
 
-// Basically does neuron stuff; y = Wx + b
+// Basically does neuron stuff; y = Wx + b, for each input
 func (d *DenseLayer) Forward(v *autograd.Variable) *autograd.Variable {
 	y := autograd.Matrix2dMul(v, d.W)
 	return autograd.Add(y, d.b)

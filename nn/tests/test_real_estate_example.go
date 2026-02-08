@@ -2,12 +2,15 @@ package tests
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/dotping-me/go-tensor/autograd"
 	"github.com/dotping-me/go-tensor/nn"
 	"github.com/dotping-me/go-tensor/nn/layers"
 	"github.com/dotping-me/go-tensor/nn/losses"
 	"github.com/dotping-me/go-tensor/nn/optimizers"
+	"github.com/dotping-me/go-tensor/nn/storage"
+	"github.com/dotping-me/go-tensor/nn/topologies"
 	"github.com/dotping-me/go-tensor/tensor"
 )
 
@@ -41,8 +44,10 @@ func TestRealEstatePrediction() {
 	//   Defining the NN model
 	// -------------------------
 
-	model := nn.NewSequential()
-	model.Add(layers.NewDenseLayer(2, 1)) // 2 Inputs -> 1 Output
+	seq := topologies.NewSequential()
+	seq.Add(layers.NewDenseLayer(2, 1)) // 2 Inputs -> 1 Output
+
+	model := nn.NewModel(seq)
 	opt := optimizers.NewSGD(model.Parameters(), 0.000001)
 
 	// ----------------------
@@ -78,15 +83,34 @@ func TestRealEstatePrediction() {
 	//   Testing the model (Inference)
 	// ---------------------------------
 
-	p := model.Parameters()
-	W := p[0].Tensor // Extracting trained weights and biases
-	b := p[1].Tensor
-
-	testInput := tensor.NewTensor([]int{1, 2}, []float32{150, 3})
+	testInput := autograd.NewVariable(
+		tensor.NewTensor([]int{1, 2}, []float32{150, 3}), false)
 
 	// TODO: Turn this into a method -> Model.Predict()
 	// Inference -> y = Wx + b
-	testOutput, _ := testInput.Matrix2DMul(W)
-	testOutput, _ = testOutput.Add(b)
-	fmt.Printf("\nTesting model with\n%v\n=\n%v\n", testInput, testOutput)
+	testOutput := model.Predict(testInput)
+	fmt.Printf("\nTesting model with\n%v\n=\n%v\n", testInput.Tensor, testOutput.Tensor)
+
+	// --------------------
+	//   Saving the model
+	// --------------------
+
+	fpath := "./models/nn.json"
+	err := storage.SaveModel(fpath, model.Parameters())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// ---------------------
+	//   Loading the model
+	// ---------------------
+
+	params, err := storage.LoadModel(fpath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	model.LoadParameters(params)
+	yetAnotherTestOutput := model.Predict(testInput)
+	fmt.Printf("\nTesting model with loaded parameters =\n%v\n", yetAnotherTestOutput.Tensor)
 }
