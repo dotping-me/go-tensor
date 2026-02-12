@@ -5,6 +5,9 @@ import (
 )
 
 func (a *Tensor) Matrix2DMul(b *Tensor) (*Tensor, error) {
+	// fmt.Println("\n", a)
+	// fmt.Println(b)
+
 	if len(a.shape) != 2 || len(b.shape) != 2 {
 		return nil, fmt.Errorf("Shapes are not 2D: %v and %v", a.shape, b.shape)
 	}

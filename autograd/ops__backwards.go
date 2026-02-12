@@ -11,6 +11,7 @@ import (
 
 // TODO: Maybe these can be made into a modular fashion like Tensor elementwise ops
 // TODO: Cleanup this file
+// TODO: Maybe turn them into Autograd Variable methods???
 
 // -----------------------------------
 //   Backwards Func() for Binary ops
@@ -129,6 +130,143 @@ func Mul(a, b *Variable) *Variable {
 	return outputVariable
 }
 
+func Div(a, b *Variable) *Variable {
+	outputTensor, err := a.Tensor.Div(b.Tensor)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a, b},
+		RequiresGrad: a.RequiresGrad || b.RequiresGrad,
+	}
+
+	// Formula:
+	// C = A / B
+
+	// Therefore:
+	// gC/gA = grad / b (How does that even make sense?)
+	// gC/gB = grad * (a / (b**2) )
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			if a.RequiresGrad {
+				gradA, _ := outputVariable.Grad.Div(b.Tensor)
+				SumGrad(&a.Grad, gradA)
+			}
+
+			if b.RequiresGrad {
+				bSquared, _ := b.Tensor.Mul(b.Tensor)
+				gradB, _ := a.Tensor.Div(bSquared) // (a / (b**2) )
+
+				gradB, _ = outputVariable.Grad.Mul(gradB)
+				gradB, _ = gradB.Neg()
+				SumGrad(&b.Grad, gradB)
+			}
+		}
+	}
+
+	return outputVariable
+}
+
+func Pow(a *Variable, factor float32) *Variable {
+	outputTensor, _ := a.Tensor.Pow(factor)
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a},
+		RequiresGrad: a.RequiresGrad,
+	}
+
+	// Formula:
+	// y = x^n
+
+	// Therefore:
+	// dy/dx = n * x^(n-1)
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			powMinus1, _ := a.Tensor.Pow(factor - 1)
+			scale, _ := powMinus1.Mul(tensor.NewScalar(factor))
+			grad, _ := outputVariable.Grad.Mul(scale)
+			SumGrad(&a.Grad, grad)
+		}
+	}
+
+	return outputVariable
+}
+
+func Sqrt(a *Variable) *Variable {
+	outputTensor, _ := a.Tensor.Sqrt()
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a},
+		RequiresGrad: a.RequiresGrad,
+	}
+
+	// Basicaaaallyyyyyy
+	// y = x^0.5
+	// dy/dx = 0.5 * x^-0.5
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			denom, _ := outputTensor.Mul(tensor.NewScalar(2))
+			grad, _ := outputVariable.Grad.Div(denom)
+			SumGrad(&a.Grad, grad)
+		}
+	}
+
+	return outputVariable
+}
+
+func Neg(a *Variable) *Variable {
+	outputTensor, _ := a.Tensor.Neg()
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a},
+		RequiresGrad: a.RequiresGrad,
+	}
+
+	// I don't know for sure about this one
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			negGrad, _ := outputVariable.Grad.Neg()
+			SumGrad(&a.Grad, negGrad)
+		}
+	}
+
+	return outputVariable
+}
+
+func Log(a *Variable) *Variable {
+	outputTensor, _ := a.Tensor.Log()
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{a},
+		RequiresGrad: a.RequiresGrad,
+	}
+
+	// Formula:
+	// y = log(x)
+	// dy/dx = 1/x
+
+	if outputVariable.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			inv, _ := a.Tensor.Pow(-1)
+			grad, _ := outputVariable.Grad.Mul(inv)
+			SumGrad(&a.Grad, grad)
+		}
+	}
+
+	return outputVariable
+}
+
 // -----------------------------------
 //   Backwards Func() for Matrix ops
 // -----------------------------------
@@ -217,6 +355,33 @@ func Sum(a *Variable, axisIndex int, keepAxis bool) *Variable {
 	}
 
 	return outputVariable
+}
+
+func Mean(a *Variable, axisIndex int, keepAxis bool) *Variable {
+	// NOTE: Gradient accumulation is handled through other autograd op functions
+
+	// Axis Normalization
+	if axisIndex < 0 {
+		axisIndex = len(a.Tensor.Shape()) + axisIndex
+	}
+
+	sum := Sum(a, axisIndex, keepAxis)
+	size := float32(a.Tensor.Shape()[axisIndex])
+	scaleTensor := tensor.NewScalar(1.0 / size)
+
+	scaleVariable := NewVariable(scaleTensor, false)
+	return Mul(sum, scaleVariable)
+}
+
+// I forgot the formula but it should be there somewhere
+func Variance(a *Variable, axisIndex int, keepAxis bool) *Variable {
+	mean := Mean(a, axisIndex, true)
+
+	diff := Sub(a, mean)
+	sq := Mul(diff, diff)
+	variance := Mean(sq, axisIndex, keepAxis)
+
+	return variance
 }
 
 // -------------------------------------------

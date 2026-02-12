@@ -16,9 +16,9 @@ func SaveModel(fpath string, params []*autograd.Variable) error {
 	defer f.Close()
 
 	// Saves parameters as JSON
-	jsonObj := make([]map[string]interface{}, len(params))
+	jsonObj := make([]map[string]any, len(params))
 	for i, p := range params {
-		jsonObj[i] = map[string]interface{}{
+		jsonObj[i] = map[string]any{
 			"shape": p.Tensor.Shape(),
 			"data":  p.Tensor.Data(),
 		}
@@ -35,7 +35,7 @@ func LoadModel(fpath string) ([]*autograd.Variable, error) {
 	defer f.Close()
 
 	// Decodes JSOn
-	var jsonObj []map[string]interface{}
+	var jsonObj []map[string]any
 	if err := json.NewDecoder(f).Decode(&jsonObj); err != nil {
 		return nil, err
 	}
@@ -43,13 +43,13 @@ func LoadModel(fpath string) ([]*autograd.Variable, error) {
 	// Turns plain values into a tensor and then into an autograd variable
 	params := make([]*autograd.Variable, len(jsonObj))
 	for i, jsonData := range jsonObj {
-		shape := jsonData["shape"].([]interface{}) // Cast values to an interface
+		shape := jsonData["shape"].([]any) // Cast values to an interface
 		outputShape := make([]int, len(shape))
 		for j, val := range shape {
 			outputShape[j] = int(val.(float64))
 		}
 
-		data := jsonData["data"].([]interface{}) // Cast values to an interface
+		data := jsonData["data"].([]any) // Cast values to an interface
 		outputData := make([]float32, len(data))
 		for j, val := range data {
 			outputData[j] = float32(val.(float64))

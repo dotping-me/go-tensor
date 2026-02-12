@@ -24,7 +24,6 @@ func findBroadcastShape(shape1 []int, shape2 []int) ([]int, error) {
 
 	maxRank := max(lengthA, lengthB)
 	outputShape := prependWith([]int{}, maxRank, 1)
-
 	for i := range maxRank {
 		if i > lengthA-1 && i <= lengthB-1 {
 			outputShape[i] = shape2[i]
