@@ -86,7 +86,6 @@ func TestRealEstatePrediction() {
 	testInput := autograd.NewVariable(
 		tensor.NewTensor([]int{1, 2}, []float32{150, 3}), false)
 
-	// TODO: Turn this into a method -> Model.Predict()
 	// Inference -> y = Wx + b
 	testOutput := model.Predict(testInput)
 	fmt.Printf("\nTesting model with\n%v\n=\n%v\n", testInput.Tensor, testOutput.Tensor)

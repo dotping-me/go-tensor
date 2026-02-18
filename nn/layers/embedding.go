@@ -1,6 +1,7 @@
 package layers
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/dotping-me/go-tensor/autograd"
@@ -32,6 +33,11 @@ func NewEmbeddingLayer(numOfTokens, vectorSize int) *EmbeddingLayer {
 
 // Converts token IDs to embeddings
 func (e *EmbeddingLayer) Forward(x *autograd.Variable) *autograd.Variable {
+	fmt.Println("\nEmbedding...")
+
+	// NOTE: It should not change the shape of the tokens
+	//       i.e [4 2] -> Embedding -> [4 2 <vectorSize>]
+
 	ids := x.Tensor.Data()
 	numOfTokens := len(ids)
 	data := make([]float32, numOfTokens*e.VectorSize)

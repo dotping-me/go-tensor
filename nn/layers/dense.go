@@ -1,6 +1,8 @@
 package layers
 
 import (
+	"fmt"
+
 	"github.com/dotping-me/go-tensor/autograd"
 	"github.com/dotping-me/go-tensor/tensor"
 )
@@ -27,7 +29,7 @@ func NewDenseLayer(numberOfInputs, numberOfOutputs int) *DenseLayer {
 
 // Basically does neuron stuff; y = Wx + b, for each input
 func (d *DenseLayer) Forward(v *autograd.Variable) *autograd.Variable {
-	// fmt.Println("Dense Layer Forward:", v.Tensor)
+	fmt.Println("Dense Forward...")
 	y := autograd.Matrix2dMul(v, d.W)
 	return autograd.Add(y, d.b)
 }

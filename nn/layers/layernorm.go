@@ -1,6 +1,8 @@
 package layers
 
 import (
+	"fmt"
+
 	"github.com/dotping-me/go-tensor/autograd"
 	"github.com/dotping-me/go-tensor/tensor"
 )
@@ -28,6 +30,7 @@ func NewLayerNorm(size int) *LayerNorm {
 }
 
 func (ln *LayerNorm) Forward(x *autograd.Variable) *autograd.Variable {
+	fmt.Println("Layer Norm Forward...")
 
 	// Normalisation formula:
 	// X = (x - mean) / sqrt(variance + eps)

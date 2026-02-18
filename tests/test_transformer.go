@@ -27,12 +27,7 @@ func TestSentimentAnalysis() {
 	}
 
 	// The true answers
-	labels := []float32{
-		0, 1, // positive
-		0, 1,
-		1, 0, // negative
-		1, 0,
-	}
+	labels := []float32{1, 1, 0, 0}
 
 	fmt.Println("Dataset:", reviews, "\nLabels :", labels)
 
@@ -85,6 +80,9 @@ func TestSentimentAnalysis() {
 		false,
 	)
 
+	fmt.Println("\nInputs X:", X.Tensor)
+	fmt.Println("True   Y:", Y.Tensor)
+
 	// ----------------------
 	//   Defining the model
 	// ----------------------
@@ -94,8 +92,13 @@ func TestSentimentAnalysis() {
 	hiddenDimension := 16
 
 	model := topologies.NewSequential()
-	model.Add(layers.NewEmbeddingLayer(numberOfTokens, vectorSize)) // NLP Inputs
+
+	// Each token is described by a vector of size vectorSize
+	model.Add(layers.NewEmbeddingLayer(numberOfTokens, vectorSize))
+
 	model.Add(layers.NewTransformerBlock(vectorSize, hiddenDimension))
+	// model.Add(layers.NewMeanPoolingLayer(2))
+
 	model.Add(layers.NewDenseLayer(8, 1)) // Outputs
 
 	opt := optimizers.NewSGD(model.Parameters(), 0.01)
@@ -104,14 +107,17 @@ func TestSentimentAnalysis() {
 	//   Training the model
 	// ----------------------
 
-	for epoch := range 50 {
+	fmt.Println("\nStarting training...")
+	for epoch := 1; epoch <= 50; epoch++ {
 		opt.SetAllParamsGradToNil()
 
 		// Forward pass
 		outputs := model.Forward(X)
-		fmt.Println(outputs.Tensor)
+		// fmt.Println(outputs.Tensor)
 
 		// Backward pass
+		fmt.Println("\nCalculating loss...")
+
 		loss := losses.CrossEntropy(outputs, Y)
 		autograd.Backward(loss)
 
@@ -120,7 +126,7 @@ func TestSentimentAnalysis() {
 
 		if epoch%5 == 0 {
 			fmt.Println(
-				"\nEpoch:", epoch,
+				"Epoch:", epoch,
 				"Loss:", loss.Tensor.Data()[0],
 			)
 		}
@@ -129,6 +135,11 @@ func TestSentimentAnalysis() {
 	// -------------
 	//   Inference
 	// -------------
+
+	params := model.Parameters()
+	for _, p := range params {
+		fmt.Println(p.Tensor)
+	}
 
 	fmt.Println("\nStarting Inference test...")
 
@@ -154,7 +165,7 @@ func TestSentimentAnalysis() {
 	}
 
 	testVariable := autograd.NewVariable(
-		tensor.NewTensor([]int{1, maxLength}, testFlat),
+		tensor.NewTensor([]int{1, len(testFlat)}, testFlat),
 		false,
 	)
 
