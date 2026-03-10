@@ -15,15 +15,19 @@ type AttentionLayer struct {
 
 func NewAttentionLayer(vectorSize int) *AttentionLayer {
 	numberOfData := vectorSize * vectorSize
-	data := make([]float32, numberOfData)
+	dataQ := make([]float32, numberOfData)
+	dataK := make([]float32, numberOfData)
+	dataV := make([]float32, numberOfData)
 
 	for i := range numberOfData {
-		data[i] = rand.Float32() * 0.01
+		dataQ[i] = rand.Float32() * 0.01
+		dataK[i] = rand.Float32() * 0.01
+		dataV[i] = rand.Float32() * 0.01
 	}
 
-	q := tensor.NewTensor([]int{vectorSize, vectorSize}, data)
-	k := tensor.NewTensor([]int{vectorSize, vectorSize}, data)
-	v := tensor.NewTensor([]int{vectorSize, vectorSize}, data)
+	q := tensor.NewTensor([]int{vectorSize, vectorSize}, dataQ)
+	k := tensor.NewTensor([]int{vectorSize, vectorSize}, dataK)
+	v := tensor.NewTensor([]int{vectorSize, vectorSize}, dataV)
 
 	return &AttentionLayer{
 		Wq: autograd.NewVariable(q, true),
@@ -33,39 +37,62 @@ func NewAttentionLayer(vectorSize int) *AttentionLayer {
 	}
 }
 
+// Calculates attention scores
 func (a *AttentionLayer) Forward(x *autograd.Variable) *autograd.Variable {
 
-	// Formula:
-	// Attention scores (how each word relates to every other word)
-	// = Softmax(Q * (K^t) / Sqrt(Dk)) * V
+	// NOTE: Assuming that input is of rank >= 3
+	shape := x.Tensor.Shape()
+	B, S, E := shape[0], shape[1], shape[2]
 
-	// But Q = X * Wq
-	//     K = X * Wk
-	//     V = X * Wv
+	xFlat := x.Reshape([]int{B * S, E})
 
-	Q := autograd.Matrix2dMul(x, a.Wq)
-	K := autograd.Matrix2dMul(x, a.Wk)
-	V := autograd.Matrix2dMul(x, a.Wv)
+	// Linear projections ([B, S, E] to [B*S, E])
+	Qflat := autograd.Matrix2dMul(xFlat, a.Wq)
+	Kflat := autograd.Matrix2dMul(xFlat, a.Wk)
+	Vflat := autograd.Matrix2dMul(xFlat, a.Wv)
 
-	// Calculates attention scores = Q * (K^t)
-	KtTensor, _ := K.Tensor.Transpose2D()
-	Kt := autograd.NewVariable(KtTensor, false)
-	scores := autograd.Matrix2dMul(Q, Kt)
+	// Reshape back to [B, S, E], because that's what we're gonna use
+	Q := Qflat.Reshape([]int{B, S, E})
+	K := Kflat.Reshape([]int{B, S, E})
+	V := Vflat.Reshape([]int{B, S, E})
 
-	// Divide (Scale) by Sqrt(Dk)
-	scaleValue := float32(math.Sqrt(float64(a.Dk)))
-	scaleTensor := tensor.NewScalar(scaleValue)
-	scaleVariable := autograd.NewVariable(scaleTensor, false)
+	outputData := make([]float32, B*S*E)
+	for b := range B {
 
-	scaled := autograd.Div(scores, scaleVariable)
+		// Get batches (= B of [S, E])
+		qBatch, _ := Q.Tensor.Get2DSliceAtParentIndex([]int{b})
+		kBatch, _ := K.Tensor.Get2DSliceAtParentIndex([]int{b})
+		vBatch, _ := V.Tensor.Get2DSliceAtParentIndex([]int{b})
 
-	// (Softmax of Q * (K^t)) * V
-	attnWeights := autograd.Softmax(scaled, 1)
-	outputVariable := autograd.Matrix2dMul(attnWeights, V)
+		qVar := autograd.NewVariable(qBatch, x.RequiresGrad)
+		kVar := autograd.NewVariable(kBatch, x.RequiresGrad)
+		vVar := autograd.NewVariable(vBatch, x.RequiresGrad)
 
-	return outputVariable
+		// Calculates attention scores
+		// [S, S] = Q * K^T
+		KtTensor, _ := kVar.Tensor.Transpose2D()
+		Kt := autograd.NewVariable(KtTensor, false)
+		scores := autograd.Matrix2dMul(qVar, Kt)
+
+		// Scale by sqrt(Dk)
+		scale := float32(math.Sqrt(float64(a.Dk)))
+		scaleVar := autograd.NewVariable(tensor.NewScalar(scale), false)
+		scaled := autograd.Div(scores, scaleVar)
+
+		attnWeights := autograd.Softmax(scaled, 1)            // Softmax along sequence axis
+		attnOutput := autograd.Matrix2dMul(attnWeights, vVar) // Multiply by weights
+
+		// Compiles everything
+		for s := range S {
+			for e := range E {
+				outputData[(b*S+s)*E+e] = attnOutput.Tensor.Data()[s*E+e]
+			}
+		}
+	}
+
+	outTensor := tensor.NewTensor([]int{B, S, E}, outputData)
+	return autograd.NewVariable(outTensor, x.RequiresGrad)
 }
-
 func (a *AttentionLayer) Parameters() []*autograd.Variable {
 	return []*autograd.Variable{a.Wq, a.Wk, a.Wv}
 }

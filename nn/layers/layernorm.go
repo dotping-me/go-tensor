@@ -49,9 +49,20 @@ func (ln *LayerNorm) Forward(x *autograd.Variable) *autograd.Variable {
 	std := autograd.Sqrt(variancePlusEps)
 	norm := autograd.Div(centered, std)
 
+	// Reshapes Gamma and Beta to broadcast shape along last axis
+	rank := len(x.Tensor.Shape())
+	broadcastShape := make([]int, rank)
+	for i := 0; i < rank-1; i++ {
+		broadcastShape[i] = 1
+	}
+	broadcastShape[rank-1] = ln.Gamma.Tensor.Shape()[0]
+
+	gammaReshaped := ln.Gamma.Reshape(broadcastShape)
+	betaReshaped := ln.Beta.Reshape(broadcastShape)
+
 	// Maps data onto a scale
-	scaled := autograd.Mul(norm, ln.Gamma)
-	shifted := autograd.Add(scaled, ln.Beta)
+	scaled := autograd.Mul(norm, gammaReshaped)
+	shifted := autograd.Add(scaled, betaReshaped)
 
 	return shifted
 }

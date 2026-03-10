@@ -13,6 +13,28 @@ import (
 // TODO: Cleanup this file
 // TODO: Maybe turn them into Autograd Variable methods???
 
+// ---------------------------------
+//   Backwards Func() for View ops
+// ---------------------------------
+
+func (v *Variable) Reshape(shape []int) *Variable {
+	t, err := tensor.Reshape(v.Tensor, shape)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &Variable{
+		Tensor:       t,
+		Parents:      []*Variable{v},
+		RequiresGrad: v.RequiresGrad,
+		BackwardFunc: func() {
+			if v.RequiresGrad {
+				SumGrad(&v.Grad, v.Grad) // Number of elements remains the same
+			}
+		},
+	}
+}
+
 // -----------------------------------
 //   Backwards Func() for Binary ops
 // -----------------------------------

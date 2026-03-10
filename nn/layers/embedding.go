@@ -8,7 +8,12 @@ import (
 	"github.com/dotping-me/go-tensor/tensor"
 )
 
-// The embedding layer basically converts token IDs into a Dense layer
+// The embedding layer basically converts token IDs into a Dense layer (I THINK???)
+// What it does is basically describe each batch of tokens with a given set of
+// features
+
+// For example:
+// [4 2] becomes [4 2 8] (using 8 features)
 
 type EmbeddingLayer struct {
 	W              *autograd.Variable
@@ -39,8 +44,8 @@ func (e *EmbeddingLayer) Forward(x *autograd.Variable) *autograd.Variable {
 	//       i.e [4 2] -> Embedding -> [4 2 <vectorSize>]
 
 	ids := x.Tensor.Data()
-	numOfTokens := len(ids)
-	data := make([]float32, numOfTokens*e.VectorSize)
+	weights := e.W.Tensor.Data()
+	data := make([]float32, len(ids)*e.VectorSize)
 
 	for i, v := range ids {
 		id := int(v) // Because Tensor holds float32 values and not integers YET!!!
@@ -48,14 +53,36 @@ func (e *EmbeddingLayer) Forward(x *autograd.Variable) *autograd.Variable {
 			id = 0 // Invalid ID -> Set to <UNK>
 		}
 
-		// Pastes the weights
-		for j := 0; j < e.VectorSize; j++ {
-			data[i*e.VectorSize+j] = e.W.Tensor.Data()[id*e.VectorSize+j]
+		// Coies weights
+		start := id * e.VectorSize
+		end := start + e.VectorSize
+
+		copy(data[i*e.VectorSize:(i+1)*e.VectorSize], weights[start:end])
+	}
+
+	inputShape := x.Tensor.Shape() // To avoid mutation, hopefully
+	shape := append(append([]int{}, inputShape...), e.VectorSize)
+
+	t := tensor.NewTensor(shape, data)
+
+	// Maintains autograd
+	outputVariable := autograd.NewVariable(t, true)
+	outputVariable.BackwardFunc = func() {
+		gradOut := outputVariable.Grad.Data()
+		gradW := e.W.Grad.Data()
+
+		for i, v := range ids {
+			id := int(v)
+
+			startW := id * e.VectorSize
+			startOut := i * e.VectorSize
+			for j := 0; j < e.VectorSize; j++ {
+				gradW[startW+j] += gradOut[startOut+j]
+			}
 		}
 	}
 
-	t := tensor.NewTensor([]int{numOfTokens, e.VectorSize}, data)
-	return autograd.NewVariable(t, false)
+	return outputVariable
 }
 
 func (e *EmbeddingLayer) Parameters() []*autograd.Variable {

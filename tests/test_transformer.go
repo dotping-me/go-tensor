@@ -89,17 +89,14 @@ func TestSentimentAnalysis() {
 
 	numberOfTokens := len(tokenizer.TokenToIndexMap)
 	vectorSize := 8 // Hardcoded # of features to describe token
-	hiddenDimension := 16
 
-	model := topologies.NewSequential()
+	model := topologies.NewSequential() // NOTE: Input shape is [4 2]
 
 	// Each token is described by a vector of size vectorSize
-	model.Add(layers.NewEmbeddingLayer(numberOfTokens, vectorSize))
-
-	model.Add(layers.NewTransformerBlock(vectorSize, hiddenDimension))
-	// model.Add(layers.NewMeanPoolingLayer(2))
-
-	model.Add(layers.NewDenseLayer(8, 1)) // Outputs
+	model.Add(layers.NewEmbeddingLayer(numberOfTokens, vectorSize)) // [4 2 8] (Gets shape from Forward())
+	model.Add(layers.NewTransformerBlock(vectorSize, vectorSize))   // [4 2 8]
+	model.Add(&layers.MeanPoolingLayer{})                           // [4 8]
+	model.Add(layers.NewDenseLayer(vectorSize, 1))                  // [8 1] (Outputs)
 
 	opt := optimizers.NewSGD(model.Parameters(), 0.01)
 
@@ -113,16 +110,17 @@ func TestSentimentAnalysis() {
 
 		// Forward pass
 		outputs := model.Forward(X)
-		// fmt.Println(outputs.Tensor)
+		fmt.Println(outputs.Tensor)
 
 		// Backward pass
 		fmt.Println("\nCalculating loss...")
 
-		loss := losses.CrossEntropy(outputs, Y)
+		loss := losses.CrossEntropy(outputs, Y) // Outputs [4 1] compared to Y [4, 1]
+		fmt.Println("Loss:", loss.Tensor)
+
 		autograd.Backward(loss)
 
-		// Adjusts parameters
-		opt.Step()
+		opt.Step() // Adjusts parameters
 
 		if epoch%5 == 0 {
 			fmt.Println(
