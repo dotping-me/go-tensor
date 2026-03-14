@@ -98,7 +98,7 @@ func TestSentimentAnalysis() {
 	model.Add(&layers.MeanPoolingLayer{})                           // [4 8]
 	model.Add(layers.NewDenseLayer(vectorSize, 1))                  // [8 1] (Outputs)
 
-	opt := optimizers.NewSGD(model.Parameters(), 0.01)
+	opt := optimizers.NewSGD(model.Parameters(), 0.001)
 
 	// ----------------------
 	//   Training the model
@@ -115,11 +115,13 @@ func TestSentimentAnalysis() {
 		// Backward pass
 		fmt.Println("\nCalculating loss...")
 
-		loss := losses.CrossEntropy(outputs, Y) // Outputs [4 1] compared to Y [4, 1]
+		loss := losses.BinaryCrossEntropy(outputs, Y) // Outputs [4 1] compared to Y [4, 1]
 		fmt.Println("Loss:", loss.Tensor)
 
+		fmt.Println("Going Back!")
 		autograd.Backward(loss)
 
+		fmt.Println("Adjusting params")
 		opt.Step() // Adjusts parameters
 
 		if epoch%5 == 0 {

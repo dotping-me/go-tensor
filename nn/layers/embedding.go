@@ -15,6 +15,8 @@ import (
 // For example:
 // [4 2] becomes [4 2 8] (using 8 features)
 
+// TODO: Add positional encoding
+
 type EmbeddingLayer struct {
 	W              *autograd.Variable
 	NumberOfTokens int // One 'row' represents one token
@@ -69,6 +71,16 @@ func (e *EmbeddingLayer) Forward(x *autograd.Variable) *autograd.Variable {
 	outputVariable := autograd.NewVariable(t, true)
 	outputVariable.BackwardFunc = func() {
 		gradOut := outputVariable.Grad.Data()
+
+		// During backward propagation (Gradients are nil)
+		if e.W.Grad == nil {
+			shape := e.W.Tensor.Shape()
+			e.W.Grad = tensor.NewTensor(
+				shape,
+				make([]float32, tensor.NumberOfDataAsPerShape(shape)),
+			)
+		}
+
 		gradW := e.W.Grad.Data()
 
 		for i, v := range ids {

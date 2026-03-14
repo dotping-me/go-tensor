@@ -5,6 +5,7 @@ package autograd
 
 import (
 	"log"
+	"math"
 
 	"github.com/dotping-me/go-tensor/tensor"
 )
@@ -23,16 +24,26 @@ func (v *Variable) Reshape(shape []int) *Variable {
 		log.Fatal(err)
 	}
 
-	return &Variable{
+	outputVariable := &Variable{
 		Tensor:       t,
 		Parents:      []*Variable{v},
 		RequiresGrad: v.RequiresGrad,
-		BackwardFunc: func() {
-			if v.RequiresGrad {
-				SumGrad(&v.Grad, v.Grad) // Number of elements remains the same
-			}
-		},
 	}
+
+	if v.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+
+			// Returns it to its initial shape
+			grad, err := tensor.Reshape(outputVariable.Tensor, v.Tensor.Shape())
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			SumGrad(&v.Grad, grad)
+		}
+	}
+
+	return outputVariable
 }
 
 // -----------------------------------
@@ -124,6 +135,8 @@ func Mul(a, b *Variable) *Variable {
 	}
 
 	// Initialises that variable's backwards function here
+	// TODO: Also handle backwards broadcasting corrections
+
 	if outputVariable.RequiresGrad {
 		outputVariable.BackwardFunc = func() {
 
@@ -134,6 +147,11 @@ func Mul(a, b *Variable) *Variable {
 					log.Fatal(err) // TODO: Maybe these checks can be removed for optimisation
 				}
 
+				// Broadcast correction
+				if !gradA.IsShapeEqualTo(a.Tensor.Shape()) {
+					gradA, _ = tensor.BroadcastBackward(gradA, a.Tensor)
+				}
+
 				SumGrad(&a.Grad, gradA)
 			}
 
@@ -141,6 +159,11 @@ func Mul(a, b *Variable) *Variable {
 				gradB, err := outputVariable.Grad.Mul(a.Tensor)
 				if err != nil {
 					log.Fatal(err)
+				}
+
+				// Broadcast correction
+				if !gradB.IsShapeEqualTo(b.Tensor.Shape()) {
+					gradB, _ = tensor.BroadcastBackward(gradB, b.Tensor)
 				}
 
 				SumGrad(&b.Grad, gradB)
@@ -363,7 +386,7 @@ func Sum(a *Variable, axisIndex int, keepAxis bool) *Variable {
 	if outputVariable.RequiresGrad {
 		outputVariable.BackwardFunc = func() {
 			grad := outputVariable.Grad
-			if !keepAxis {
+			if !keepAxis && (len(grad.Shape()) < len(a.Tensor.Shape())) {
 				grad, _ = grad.ExpandDims(axisIndex)
 			}
 
@@ -458,6 +481,42 @@ func CrossEntropy(x, y *Variable) *Variable {
 		outputVariable.BackwardFunc = func() {
 			diff, _ := probs.Tensor.Sub(y.Tensor)
 			SumGrad(&x.Grad, diff)
+		}
+	}
+
+	return outputVariable
+}
+
+// Sigmoid(X) = 1 / (1 + (e^-X))
+func Sigmoid(x *Variable) *Variable {
+	outputTensor := x.Tensor.Copy()
+	data := outputTensor.Data()
+
+	// Calculates sigmoid of each data
+	// NOTE: Should I use the exp autograd operation?
+	for i := range data {
+		data[i] = 1 / (1 + float32(math.Exp(float64(-data[i]))))
+	}
+
+	outputVariable := &Variable{
+		Tensor:       outputTensor,
+		Parents:      []*Variable{x},
+		RequiresGrad: x.RequiresGrad,
+	}
+
+	// During back propagation
+	if x.RequiresGrad {
+		outputVariable.BackwardFunc = func() {
+			grad := outputVariable.Grad.Copy()
+			gradData := grad.Data()
+			outputData := outputVariable.Tensor.Data() // Stores values of Sigmoid(X)
+
+			// dy/dx = Sigmoid(X) * (1 - Sigmoid(X))
+			for i := range gradData {
+				gradData[i] *= outputData[i] * (1 - outputData[i])
+			}
+
+			SumGrad(&x.Grad, grad)
 		}
 	}
 

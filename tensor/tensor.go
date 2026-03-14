@@ -3,6 +3,7 @@
 package tensor
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -18,6 +19,10 @@ type Tensor struct {
 
 // Constructor which calculates strides on instantiation
 func NewTensor(shape []int, data []float32) *Tensor {
+
+	// fmt.Println("\nShape:", shape)
+	// fmt.Println("Data:", data)
+
 	if len(data) != NumberOfDataAsPerShape(shape) {
 		log.Fatalf(
 			"# of Tensor data does not match Tensor dimensions: %d != %d",
@@ -290,4 +295,24 @@ func (t *Tensor) Transpose2D() (*Tensor, error) {
 		strides:     []int{t.strides[1], t.strides[0]},
 		sliceOffset: t.sliceOffset,
 	}, nil
+}
+
+// Sums values where axes are 1 for use in Back Propagation to align shapes
+// I may not need this but I don't know
+func SumAlongBroadcastAxes(grad *Tensor, targetShape []int) (*Tensor, error) {
+	if len(grad.Shape()) != len(targetShape) {
+		return nil, errors.New("shape mismatch in SumAlongBroadcastAxes")
+	}
+
+	result := grad.Copy()
+
+	// Sums along axes where size = 1
+	for axis, size := range targetShape {
+		if size == 1 && grad.Shape()[axis] != 1 {
+			result, _ = result.Sum(axis, true)
+		}
+	}
+
+	// reshape to exactly targetShape
+	return Reshape(result, targetShape)
 }
